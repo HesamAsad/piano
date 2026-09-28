@@ -86,11 +86,14 @@
     }
     function showSpan(lo, hi) {
       if (lo >= win.from && hi <= win.to) return;
-      const span = absWhite(win.to) - absWhite(win.from);
+      // A hand diagram must fit all of its fingers, including on a narrow screen.
+      const needed = absWhite(T.isBlack(hi) ? hi + 1 : hi) - absWhite(T.isBlack(lo) ? lo - 1 : lo);
+      const span = Math.max(absWhite(win.to) - absWhite(win.from), needed);
       const mid = (absWhite(T.isBlack(lo) ? lo - 1 : lo) + absWhite(T.isBlack(hi) ? hi + 1 : hi)) / 2;
       let s = Math.round(mid - span / 2);
       s = Math.max(absWhite(o.from), Math.min(absWhite(o.to) - span, s));
       win = { from: whiteToMidi(s), to: whiteToMidi(s + span) };
+      nav.hidden = win.from === o.from && win.to === o.to;
       build();
     }
     function ensureVisible(midi) {
@@ -174,13 +177,13 @@
       const top = kbd.offsetTop + kbd.clientTop;
       const left = kbd.offsetLeft + kbd.clientLeft;
       const fw = Math.max(10, Math.min(27, keyW * 0.56));
-      const room = Math.round(Math.max(90, Math.min(175, fw * 6.2)));
+      const room = Math.round(Math.max(65, Math.min(140, fw * 4.7)));
       stage.style.paddingBottom = room + 'px';
       const total = top + H + room;
       handSvg = MC.util.s('svg', { class: 'hands-layer', width: W, height: total, viewBox: `0 0 ${W} ${total}`, 'aria-hidden': 'true' });
       const shared = {};
       hands.forEach((hd) => Object.values(hd.fingers).forEach((m) => { shared[m] = (shared[m] || 0) + 1; }));
-      const REACH = { 1: 0.86, 2: 0.76, 3: 0.73, 4: 0.76, 5: 0.82 };
+      const REACH = { 1: 0.95, 2: 0.76, 3: 0.73, 4: 0.77, 5: 0.85 };
       hands.forEach((hd) => {
         const tips = {};
         for (const f of [1, 2, 3, 4, 5]) {
@@ -191,7 +194,7 @@
           if (shared[m] > 1) x += (hd.hand === 'rh' ? 1 : -1) * el.offsetWidth * 0.2; // e.g. both thumbs on middle C
           tips[f] = { x, y: top + H * (el.classList.contains('black') ? 0.42 : REACH[f]) };
         }
-        const d = MC.Hand.draw(handSvg, { hand: hd.hand, tips, fw, baseY: top + H, fadeTo: total, numbers: hd.numbers !== false, label: fw >= 17 });
+        const d = MC.Hand.draw(handSvg, { hand: hd.hand, pose: 'keyboard', tips, fw, baseY: top + H, fadeTo: total, numbers: hd.numbers !== false, label: fw >= 17 });
         if (entering.has(hd.hand)) d.g.classList.add('hk-enter');
         [1, 2, 3, 4, 5].forEach((f) => handParts.push({ hand: hd.hand, midi: hd.fingers[f], parts: d.parts[f] }));
       });

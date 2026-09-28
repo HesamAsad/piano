@@ -451,30 +451,43 @@ a.pre-chip:hover { border-color: var(--accent); color: var(--accent-ink); }
 .kbd-legend kbd { font-size: 0.72rem; }
 /* Hands resting on the keys */
 .with-hands .key.white { padding-bottom: calc((var(--kbd-h) - 11px) * 0.29); }
+.with-hands .key.white .key-name { font-size: min(0.8rem, 14px); }
 .with-hands .key-map { display: none; }
 .with-hands .key.is-middle-c::after { display: none; }
 .with-hands .key.has-finger .key-finger { display: none; }
 .hands-layer { position: absolute; left: 0; top: 0; pointer-events: none; z-index: 5; overflow: visible; }
-.hk { --hk-fill: #e7ebfc; --hk-line: #5b6cd6; --hk-press: #c2ccf6; --hk-badge: var(--accent); }
+.hk { --hk-line: #45434a; --hk-badge: var(--accent); }
+.hk.lh { --hk-badge: var(--lh); }
+.hk [data-f="1"] { --finger-color: #249e68; --finger-soft: #a9dfc2; }
+.hk [data-f="2"] { --finger-color: #f3cb32; --finger-soft: #f9e99b; }
+.hk [data-f="3"] { --finger-color: #7850db; --finger-soft: #c9b7f1; }
+.hk [data-f="4"] { --finger-color: #348de0; --finger-soft: #a4d5f5; }
+.hk [data-f="5"] { --finger-color: #e65787; --finger-soft: #f6b7ce; }
 .hk-enter { animation: hk-in 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
-.hk.lh { --hk-fill: #fdefe0; --hk-line: #c67631; --hk-press: #f5cfa6; --hk-badge: var(--lh); }
 @keyframes hk-in { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
-.hands-layer .hk { opacity: 0.95; }
-.hk-outline * { fill: none; stroke: var(--hk-line); stroke-linecap: round; stroke-linejoin: round; }
-.hk-outline .hk-palm { fill: var(--hk-line); }
-.hk-fill * { fill: none; stroke: var(--hk-fill); stroke-linecap: round; stroke-linejoin: round; transition: stroke 0.12s; }
-.hk-fill .hk-palm { fill: var(--hk-fill); stroke: none; }
-.hk-nail { fill: #ffffff; opacity: 0.75; }
-.hk-badge circle { fill: var(--hk-badge); stroke: #fff; stroke-width: 1.5; transition: fill 0.12s; }
-.hk-badge text { fill: #fff; font-family: var(--font-ui); font-weight: 750; }
-.hk-label { fill: var(--hk-line); font-family: var(--font-ui); font-weight: 650; letter-spacing: 0.02em; }
-.hk .down { transform: translateY(3px); }
-.hk-outline .down, .hk-fill .down, .hk-nail, .hk-badge { transition: transform 0.08s, stroke 0.12s; }
-.hk-fill .down { stroke: var(--hk-press); }
+.hk-silhouette { fill: #fff; }
+.hk-contour { fill: none; stroke: var(--hk-line); stroke-width: var(--hk-outline); stroke-linejoin: round; stroke-linecap: round; pointer-events: none; }
+.hk-finger { fill: transparent; stroke: transparent; stroke-width: 1; transition: fill 0.12s, stroke 0.12s; }
+.hk-colors, .hk-cues, .hk-badges, .hk-label { pointer-events: none; }
+.hk-cue { opacity: 0; fill: none; stroke: var(--ink); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.hk-cue.on, .hk-cue.ok, .hk-cue.bad { opacity: 1; }
+.hk-cue.ok { stroke: var(--ok); }
+.hk-cue.bad { stroke: var(--bad); }
+.hk-color { transition: filter 0.12s; }
+.hk-color-tip { fill: var(--finger-color); }
+.hk-color-soft { fill: var(--finger-soft); }
+.hk-badge circle { fill: var(--finger-color); stroke: #fff; stroke-width: 1.3; transition: fill 0.12s; }
+.hk-badge text { fill: #17161d; font-family: var(--font-ui); font-weight: 750; }
+.hk-badge[data-f="3"] text { fill: #fff; }
+.hk-label { fill: var(--hk-badge); font-family: var(--font-ui); font-weight: 650; letter-spacing: 0.01em; }
+.hk-badge { transition: transform 0.08s; }
+.hk-badge.down { transform: translateY(2px); }
+.hk-color.down, .hk-color.on { filter: brightness(0.86) saturate(1.1); }
+.hk-fill .down, .hk-fill .next { fill: var(--finger-color); fill-opacity: 0.2; }
 .hk-badge.down circle { fill: var(--ink); }
-.hk-fill .next { stroke: var(--hk-press); }
-.hk-badge.next circle { fill: #fff; stroke: var(--hk-badge); stroke-width: 3; transform-box: fill-box; transform-origin: center; animation: hk-pulse 1.1s ease-in-out infinite; }
-.hk-badge.next text { fill: var(--hk-badge); }
+.hk-badge.down text { fill: #fff; }
+.hk-badge.next circle { fill: #fff; stroke: var(--finger-color); stroke-width: 3; transform-box: fill-box; transform-origin: center; animation: hk-pulse 1.1s ease-in-out infinite; }
+.hk-badge.next text { fill: #17161d; }
 .hk-badge.next.down circle { fill: var(--ink); animation: none; }
 .hk-badge.next.down text { fill: #fff; }
 @keyframes hk-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.22); } }
@@ -608,19 +621,17 @@ a.pre-chip:hover { border-color: var(--accent); color: var(--accent-ink); }
 .tap-pad[disabled] { opacity: 0.55; cursor: default; }
 
 /* Hand diagram (stand-alone) */
-.hands { display: flex; gap: 22px; justify-content: center; flex-wrap: wrap; }
-.hand-svg { width: 200px; max-width: 46%; height: auto; overflow: visible; }
-.hand-svg .hk-fill .finger { cursor: pointer; pointer-events: stroke; }
-.hand-svg .hk-fill .finger:hover { stroke: var(--hk-press); }
-.hand-svg .hk-fill .finger:focus-visible { stroke: var(--accent-soft-2); box-shadow: none; }
-.hand-svg .hk-fill .on { stroke: var(--hk-press); }
-.hand-svg .hk-outline .on { stroke: var(--hk-badge); }
+.hands { --hand-gap: clamp(10px, 3vw, 22px); display: flex; gap: var(--hand-gap); justify-content: center; flex-wrap: wrap; }
+.hand-svg { width: 200px; max-width: calc((100% - var(--hand-gap, 22px)) / 2); height: auto; overflow: visible; }
+.hand-svg .finger.is-interactive { cursor: pointer; pointer-events: all; }
+.hand-svg .finger.is-interactive:hover { fill: #fff; fill-opacity: 0.2; }
+.hand-svg .finger:focus-visible { fill: var(--finger-color); fill-opacity: 0.18; stroke: var(--hk-line); stroke-width: 2.5; outline: none; }
+.hand-svg .hk-fill .on { fill: var(--finger-color); fill-opacity: 0.2; stroke: var(--ink); stroke-width: 2.5; }
 .hand-svg .hk-badge.on circle { fill: var(--ink); }
-.hand-svg .hk-fill .ok { stroke: #bfe6cf; }
-.hand-svg .hk-outline .ok { stroke: var(--ok); }
+.hand-svg .hk-badge.on text, .hand-svg .hk-badge.ok text, .hand-svg .hk-badge.bad text { fill: #fff; }
+.hand-svg .hk-fill .ok { fill: #bfe6cf; }
 .hand-svg .hk-badge.ok circle { fill: var(--ok); }
-.hand-svg .hk-fill .bad { stroke: #f6c6c0; }
-.hand-svg .hk-outline .bad { stroke: var(--bad); }
+.hand-svg .hk-fill .bad { fill: #f6c6c0; }
 .hand-svg .hk-badge.bad circle { fill: var(--bad); }
 
 /* Quiz */
