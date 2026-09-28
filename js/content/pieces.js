@@ -1,5 +1,5 @@
-/* Piece library. Traditional/public-domain melodies (simplified for beginners where noted)
-   and original exercises written for this workbook. Voice syntax: see theory.parseVoice. */
+/* Piece library: traditional melodies, original exercises, and credited score excerpts.
+   Voice syntax: see theory.parseVoice. */
 (function (MC) {
   'use strict';
   const P = (MC.pieces = {});
@@ -114,6 +114,145 @@
     staves: [
       { clef: 'treble', hand: 'rh', voice: '|: (C4q/1@p D4q/2 E4q/3 F4q/4) | (G4h/5 E4h/3) | < (F4q/4 E4q/3 D4q/2 E4q/3) | G4h/5 ! G4h :| E4q*/3@mf E4q* F4q*/4 G4q*/5 | > (G4q/5 F4q/4 E4q/3 D4q/2) ! | C4w/1@p' },
       { clef: 'bass', hand: 'lh', voice: '|: C3w/5 | C3w/5 | G3w/1 | G3w/1 :| C3w/5 | G3w/1 | C3w/5' },
+    ],
+  });
+  add('the-night-king', {
+    title: 'The Night King — opening excerpt', short: 'The Night King',
+    composer: 'Ramin Djawadi', arranger: 'Liam Hinzman', level: 5,
+    excerpt: true,
+    keyLabel: 'A minor', tempo: 60, tempoChanges: [{ measure: 13, bpm: 115 }],
+    doubleBars: [12, 40],
+    extendedRange: true,
+    note: 'Opening excerpt, measures 1–58. The tempo rises to 115 BPM at measure 13. Play three quarter-note triplets in two beats. Rolled chords sound from low to high; fermatas are shown, while playback keeps a steady practice pulse.',
+    sections: [
+      { label: 'Opening', from: 1, to: 12 },
+      { label: 'Theme', from: 13, to: 26 },
+      { label: 'Octave melody', from: 27, to: 40 },
+      { label: 'Triplets', from: 41, to: 58 },
+    ],
+    staves: [
+      {
+        clef: 'treble', hand: 'rh',
+        annotations: [1, 2, 3, 4, 5, 7, 9, 11, 12].map((measure) => ({ measure, fermata: true, arpeggio: [5, 7, 9, 11].includes(measure) })),
+        voice: [
+          // 1–12: quiet opening. No fingering is supplied in the source.
+          'A4h@pp re A4e C5e C5e', 'A4w',
+          '[A4,A5]h re [A4,A5]e [C5,C6]e [C5,C6]e', '[A4,A5]w',
+          '[E5,A5,E6]h re A4e C5e C5e', '[D5,A5,D6]w',
+          '[C5,A5,C6]h re A4e C5e C5e', '[A4,E5]w',
+          '[E5,A5,E6]h re A4e C5e C5e', '[D5,A5,D6]w',
+          '[C5,A5,C6]h re F5e A5e A5e', '[B4,E5]w',
+          // 13–26: single-note melody.
+          'rm', 'rm', 're C5q@p C5e~ C5h', 'C5e B4e~ B4h.~',
+          'B4w', 're C5q C5e~ C5h', 'C5e A4e~ A4h.~', 'A4w',
+          're A4q A4e~ A4h', 'A4e F4e~ F4h.~', 'F4w',
+          're F4q F4e~ F4h', 'E4w~', 'E4w',
+          // 27–40: melody in octaves.
+          're [C5,C6]q [C5,C6]e~ [C5,C6]h', '[C5,C6]e [B4,B5]e~ [B4,B5]h.~',
+          '[B4,B5]w', 're [C5,C6]q [C5,C6]e~ [C5,C6]h',
+          '[C5,C6]e [A4,A5]e~ [A4,A5]h.~', '[A4,A5]w',
+          're [A4,A5]q [A4,A5]e~ [A4,A5]h', '[A4,A5]e [F4,F5]e~ [F4,F5]h.~',
+          '[F4,F5]w', 're [F4,F5]q [F4,F5]e~ [F4,F5]h',
+          '[F4,F5]e [E4,E5]e~ [E4,E5]h.~', '[E4,E5]w', 'rm', 'rh [D4,D5]h',
+          // 41–58: quarter-note triplets and low bass octaves.
+          '[E4,A4,E5]w@mp', 'A3qt C4qt C4qt A3h',
+          'A3w', 'A3qt C4qt C4qt A3h', 'A3w', 'A3qt C4qt C4qt A3h',
+          'A3w', 'A3qt C4qt C4qt B3h', 'A3w', 'A3qt C4qt C4qt A3h',
+          'A3w', 'A3qt C4qt C4qt B3h', 'A3w', 'A3qt C4qt C4qt A3h',
+          'A3w', 'A3qt C4qt C4qt B3h', 'A3q E4e A4e~ A4h~', 'A4w',
+        ].join(' | '),
+      },
+      {
+        clef: 'treble', hand: 'lh', clefChanges: { 13: 'bass' },
+        annotations: [7, 9, 11, 12].map((measure) => ({ measure, fermata: true })),
+        voice: [
+          'rm', 'rm', 'rm', 'rm', 'rm', 'E4w@pp', 'D4w', 'E4w', 'A4w', 'E4w', 'D4w', '[E4,G#4]w',
+          'A3w@p', 'A3q E4h.', 'A3w', 'A3w', 'A3q E4h.', 'A3w',
+          'E3w', 'E3q [B3,E4]h.', 'E3w', 'C3w', 'C3q [A3,C4]h.', 'C3w',
+          'A2w', 'A2q [E3,A3]h.', 'A3q E4h.', 'A3q E4h.',
+          'A3q E4h.', 'A3q E4h.', 'E3q B3h.', 'E3q B3h.', 'E3q B3h.',
+          'C3q A3h.', 'C3q A3h.', 'C3q A3h.',
+          'Bb2q D3h.', 'Bb2q D3h.', 'Bb2q D3h.', 'Bb2q D3h.',
+          '[A2,E3,A3]w@mp', '[A2,E3]w',
+          '[G#1,G#2]w~', '[G#1,G#2]w', '[F#1,F#2]w~', '[F#1,F#2]w',
+          '[G#1,G#2]w~', '[G#1,G#2]w', '[A1,A2]w~', '[A1,A2]w',
+          '[G#1,G#2]w~', '[G#1,G#2]w', '[F#1,F#2]w~', '[F#1,F#2]w',
+          '[G#1,G#2]w~', '[G#1,G#2]w', '[A1,A2]h A2h', 'A2h A2h',
+        ].join(' | '),
+      },
+    ],
+  });
+  add('interstellar', {
+    title: 'Interstellar Theme — Easy Piano', short: 'Interstellar Theme',
+    composer: 'Hans Zimmer', arranger: 'Matteo248', level: 5,
+    keyLabel: 'A minor', time: [3, 4], tempo: 90, extendedRange: true,
+    caesuras: [37],
+    note: 'The complete 51-measure arrangement from the supplied score. Start slowly with each hand separately. In measures 35–37, hold the upper E while repeating the lower E. The faster passage begins at measure 38; the written pause at measure 37 keeps its measured length in playback.',
+    sections: [
+      { label: 'Opening', from: 1, to: 10 },
+      { label: 'Melody', from: 11, to: 26 },
+      { label: 'Arpeggios', from: 27, to: 37 },
+      { label: 'Finale', from: 38, to: 51 },
+    ],
+    staves: [
+      { clef: 'treble', hand: 'rh', voice: [
+        // 1–10: alternating eighth notes.
+        'E4e C4e E4e C4e E4e C4e', 'E4e C4e E4e C4e E4e C4e',
+        'E4e C4e E4e C4e E4e C4e', 'E4e C4e E4e C4e E4e C4e',
+        'E4e D4e E4e D4e E4e D4e', 'E4e D4e E4e D4e E4e D4e',
+        'E4e C4e E4e D4e E4e D4e', 'E4e D4e E4e C4e E4e D4e',
+        'E4e D4e E4e D4e E4e D4e', 'E4e D4e E4e D4e E4e D4e',
+        // 11–18: the melody over repeated left-hand intervals.
+        'A4q E5h', 'A4q E5h', 'B4q E5h', 'B4q E5h',
+        'C5q E5h', 'C5q E5h', 'D5q E5h', 'D5q E5q B4q',
+        // 19–26: three-note accompaniment.
+        'A4q E5q A4q', 'A4q E5q A4q', 'B4q E5q B4q', 'B4q E5q B4q',
+        'C5q E5q C5q', 'C5q E5q C5q', 'D5q E5q D5q', 'D5q E5q B4q',
+        // 27–34: the same melodic shape over broken chords.
+        'A4q E5q A4q', 'A4q E5q A4q', 'B4q E5q B4q', 'B4q E5q B4q',
+        'C5q E5q C5q', 'C5q E5q C5q', 'D5q E5q D5q', 'D5q E5q B4q',
+        // 35–37: only the upper note is tied; eight lower Es are separate attacks.
+        '[E4,E5]q~[E5] [E4,E5]q~[E5] [E4,E5]q~[E5]',
+        '[E4,E5]q~[E5] [E4,E5]q~[E5] [E4,E5]q~[E5]',
+        '[E4,E5]q~[E5] [E4,E5]q rq',
+        // 38–49: twelve sixteenths per bar, grouped in quarter-note beats.
+        'C5s A4s E4s C5s A4s E4s C5s A4s E4s C5s A4s E4s',
+        'C5s A4s E4s C5s A4s E4s C5s A4s E4s D5s A4s E4s',
+        'C5s A4s E4s C5s A4s E4s C5s A4s E4s C5s A4s E4s',
+        'C5s A4s E4s C5s A4s E4s C5s A4s E4s F5s C5s A4s',
+        'F5s C5s A4s F5s C5s A4s F5s C5s A4s G5s C5s A4s',
+        'G5s C5s A4s G5s C5s A4s G5s C5s A4s B5s G5s E5s',
+        'B5s G5s E5s B5s G5s E5s B5s G5s E5s B5s G5s E5s',
+        'B5s G5s E5s B5s G5s E5s B5s G5s E5s C6s A5s E5s',
+        'C6s A5s E5s C6s A5s E5s C6s A5s E5s C6s A5s E5s',
+        'C6s A5s E5s C6s A5s E5s C6s A5s E5s D6s B5s E5s',
+        'D6s B5s E5s D6s B5s E5s D6s B5s E5s D6s B5s E5s',
+        'D6s B5s E5s D6s B5s E5s [E5,E6]q.~',
+        '[E5,E6]h.~', '[E5,E6]h.',
+      ].join(' | ') },
+      { clef: 'bass', hand: 'lh', voice: [
+        'rm', 'rm', 'rm', '[A2,A3]h.', '[B2,B3]h.~', '[B2,B3]h.',
+        '[A2,A3]q [B2,B3]q [C3,C4]q', '[B2,B3]q [A2,A3]q [B2,B3]q', '[C3,C4]h.', '[B2,B3]h.',
+        '[F2,A2]q [F2,A2]q [F2,A2]q', '[F2,A2]q [F2,A2]q [F2,A2]q',
+        '[G2,D3]q [G2,D3]q [G2,D3]q', '[G2,D3]q [G2,D3]q [G2,D3]q',
+        '[A2,E3]q [A2,E3]q [A2,E3]q', '[A2,E3]q [A2,E3]q [A2,E3]q',
+        '[G2,D3]q [G2,D3]q [G2,D3]q', '[G2,D3]q [G2,D3]q [G2,D3]q',
+        '[F2,C3,F3]q [F2,C3,F3]q [F2,C3,F3]q', '[F2,C3,F3]q [F2,C3,F3]q [F2,C3,F3]q',
+        '[G2,D3,G3]q [G2,D3,G3]q [G2,D3,G3]q', '[G2,D3,G3]q [G2,D3,G3]q [G2,D3,G3]q',
+        '[A2,E3,A3]q [A2,E3,A3]q [A2,E3,A3]q', '[A2,E3,A3]q [A2,E3,A3]q [A2,E3,A3]q',
+        '[G2,D3,G3]q [G2,D3,G3]q [G2,D3,G3]q', '[G2,D3,G3]q [G2,D3,G3]q [G2,D3,G3]q',
+        'F2e C3e F3e C3e F2e C3e', 'F2e C3e F3e C3e F2e C3e',
+        'G2e D3e G3e D3e G2e D3e', 'G2e D3e G3e D3e G2e D3e',
+        'A2e E3e A3e E3e A2e E3e', 'A2e E3e A3e E3e A2e E3e',
+        'G2e D3e G3e D3e G2e D3e', 'G2e D3e G3e D3e G2e D3e',
+        '[E2,E3]h.~', '[E2,E3]h.~', '[E2,E3]h.',
+        '[A2,E3,A3]h.~', '[A2,E3,A3]h rs [G2,D3,G3]e.~',
+        '[G2,D3,G3]h.~', '[G2,D3,G3]h rs [F2,C3,F3]e.~',
+        '[F2,C3,F3]h.~', '[F2,C3,F3]h rs [G2,D3,G3]e.~',
+        '[G2,D3,G3]h.~', '[G2,D3,G3]h rs [A2,E3,A3]e.~',
+        '[A2,E3,A3]h.~', '[A2,E3,A3]h rs [G2,D3,G3]e.~',
+        '[G2,D3,G3]h.~', '[G2,D3,G3]q. [E2,E3]q.~', '[E2,E3]h.~', '[E2,E3]h.',
+      ].join(' | ') },
     ],
   });
 })(window.MC = window.MC || {});

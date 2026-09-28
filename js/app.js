@@ -577,8 +577,8 @@
       m.append(panel);
       return;
     }
-    m.append(h('div.page-head', null, h('h1', null, 'Pieces'), h('p', null, 'Traditional melodies (public domain, some simplified) and original exercises. Each can be watched, played with guidance, or played independently with separate pitch and rhythm scores.')));
-    const levels = { 1: 'First melodies (one hand)', 2: 'Reading on your own', 3: 'Two hands and new keys', 4: 'Chords and expression' };
+    m.append(h('div.page-head', null, h('h1', null, 'Pieces'), h('p', null, 'Traditional melodies, original exercises, and repertoire. Each can be watched, played with guidance, or played independently with separate pitch and rhythm scores.')));
+    const levels = { 1: 'First melodies (one hand)', 2: 'Reading on your own', 3: 'Two hands and new keys', 4: 'Chords and expression', 5: 'Repertoire' };
     Object.entries(levels).forEach(([lv, name]) => {
       const ps = Object.values(MC.pieces).filter((p) => p.level === +lv);
       m.append(h('h2', { style: { marginTop: '18px' } }, name));
@@ -586,7 +586,7 @@
         const r = S.piece(p.id);
         const hands = p.staves.length > 1 ? 'Both hands' : p.staves[0].clef === 'bass' ? 'Left hand' : 'Right hand';
         const stat = r.bestPitch != null ? `Best: notes ${U.pct(r.bestPitch)}${r.bestRhythm != null ? `, rhythm ${U.pct(r.bestRhythm)}` : ''}` : r.guided ? 'Played with guidance' : 'Not played yet';
-        return h('a.practice-tile', { href: '#/pieces/' + p.id }, h('span.t', null, p.title), h('span.d', null, `${hands} · ${T.KEYS[p.key].name} · ${p.time.join('/')} · ${p.composer}`), h('span.tag', null, stat));
+        return h('a.practice-tile', { href: '#/pieces/' + p.id }, h('span.t', null, p.title), h('span.d', null, `${hands} · ${p.keyLabel || T.KEYS[p.key].name} · ${p.time.join('/')} · ${p.composer}${p.arranger ? ` · arr. ${p.arranger}` : ''}`), h('span.tag', null, stat));
       })));
     });
   }
@@ -691,7 +691,7 @@
       h('li', { html: '<strong>Piano sound:</strong> Salamander Grand Piano V3 by Alexander Holm, <a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noopener">CC BY 3.0</a>, via the MP3 package by Jan Forst (MIT). Changed for this app: 21 notes (C2–C7), mono, trimmed, re-encoded; other notes are pitch-shifted. See <code>licenses/</code>.' }),
       h('li', { html: '<strong>Notation font:</strong> Bravura © Steinberg Media Technologies GmbH, SIL Open Font License 1.1 (subset embedded).' }),
       h('li', { html: '<strong>Text fonts:</strong> Inter (© The Inter Project Authors) and Fraunces (© The Fraunces Project Authors), both SIL Open Font License 1.1, Latin subsets bundled. See <code>licenses/</code>.' }),
-      h('li', { html: '<strong>Melodies:</strong> traditional and public-domain tunes (Hot Cross Buns, Mary Had a Little Lamb, Au clair de la lune, Lightly Row/Hänschen klein, Beethoven’s Ode to Joy theme), some simplified; all other pieces are original exercises.' }))));
+      h('li', { html: '<strong>Melodies:</strong> traditional and public-domain tunes (Hot Cross Buns, Mary Had a Little Lamb, Au clair de la lune, Lightly Row/Hänschen klein, Beethoven’s Ode to Joy theme), some simplified, plus original exercises. The Night King excerpt (measures 1–58) is by Ramin Djawadi, arranged by Liam Hinzman. Interstellar Theme — Easy Piano is by Hans Zimmer, arranged by Matteo248. Both are transcribed from supplied scores.' }))));
     m.append(h('div.panel', null, h('h2', null, 'Honest limitations'), h('ul', null,
       h('li', null, 'The app checks which keys you press and when. It cannot see posture or hand technique, and cannot hear an acoustic piano (no microphone input). Real-piano practice is self-reported.'),
       h('li', null, 'On-screen and computer keys cannot sense how hard you press; loudness comes from a slider. A MIDI keyboard sends real key speed.'),

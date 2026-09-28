@@ -389,17 +389,21 @@
       this.timer = null;
       this.raf = null;
       this.voiceIds = [];
+      this.tempo = T.tempoClock(this.o.bpm, this.o.tempoMap);
       A.lastTransport = this; // lets automated tests align simulated playing with the beat
     }
     get bpm() { return this.o.bpm; }
     setBpm(b) {
       if (this.playing) { const cur = this.beatNow(); this.anchor = { time: this.clock(), beat: cur }; }
       this.o.bpm = b;
+      this.tempo = T.tempoClock(b, this.o.tempoMap);
       if (this.playing) this._resetSchedule(this.beatNow());
     }
     clock() { return this.silent ? performance.now() / 1000 : ctx.currentTime; }
-    beatNow() { return this.anchor.beat + ((this.clock() - this.anchor.time) * this.o.bpm) / 60; }
-    beatToTime(b) { return this.anchor.time + ((b - this.anchor.beat) * 60) / this.o.bpm; }
+    beatNow() { return this.timeToBeat(this.clock()); }
+    timeToBeat(t) { return this.tempo.beat(this.tempo.seconds(this.anchor.beat) + t - this.anchor.time); }
+    beatToTime(b) { return this.anchor.time + this.tempo.between(this.anchor.beat, b); }
+    secondsBetween(a, b) { return this.tempo.between(a, b); }
     _resetSchedule(fromBeat) {
       this.nextIdx = this.events.findIndex((e) => e.t >= fromBeat - 1e-6);
       if (this.nextIdx < 0) this.nextIdx = this.events.length;
@@ -433,9 +437,13 @@
           const t = this.beatToTime(e.t);
           if (t > horizon) break;
           if (!e.silent) {
-            const durSec = ((e.stacc ? Math.min(e.d, 0.5) * 0.5 : e.d * 0.94) * 60) / this.o.bpm;
             if (e.rhythmOnly) A.tap(t, e.vel);
-            else (e.midis || []).forEach((m, i) => this.voiceIds.push(A.play(m, durSec, (e.vel || 0.65) * vel, t + (e.spread || 0) * i)));
+            else (e.midis || []).forEach((m, i) => {
+              const d = e.durations?.[i] ?? e.d;
+              const heldBeats = e.stacc ? Math.min(d, 0.5) * 0.5 : d;
+              const durSec = this.secondsBetween(e.t, e.t + heldBeats) * (e.stacc ? 1 : 0.94);
+              this.voiceIds.push(A.play(m, durSec, (e.vel || 0.65) * vel, t + (e.spread || 0) * i));
+            });
           }
           this.nextIdx++;
         }

@@ -10,11 +10,11 @@
   const FS = SP * 4;
   const G = {
     gClef: '\uE050', fClef: '\uE062', nhWhole: '\uE0A2', nhHalf: '\uE0A3', nhBlack: '\uE0A4',
-    flagUp: '\uE240', flagDown: '\uE241', flat: '\uE260', natural: '\uE261', sharp: '\uE262',
-    restW: '\uE4E3', restH: '\uE4E4', restQ: '\uE4E5', rest8: '\uE4E6',
+    flagUp: '\uE240', flagDown: '\uE241', flag16Up: '\uE242', flag16Down: '\uE243', flat: '\uE260', natural: '\uE261', sharp: '\uE262',
+    restW: '\uE4E3', restH: '\uE4E4', restQ: '\uE4E5', rest8: '\uE4E6', rest16: '\uE4E7',
     p: '\uE520', m: '\uE521', f: '\uE522', brace: '\uE000', staccAbove: '\uE4A2', staccBelow: '\uE4A3',
   };
-  const HEAD_W = { w: 1.688, h: 1.18, q: 1.18, e: 1.18 };
+  const HEAD_W = { w: 1.688, h: 1.18, q: 1.18, e: 1.18, s: 1.18 };
   const ACC_GLYPH = { '-1': G.flat, 0: G.natural, 1: G.sharp };
   const ACC_W = { '-1': 0.904, 0: 0.672, 1: 0.996 };
   const tsGlyphs = (n) => String(n).split('').map((c) => String.fromCharCode(0xe080 + +c)).join('');
@@ -39,12 +39,12 @@
           ev._ref = `${si}:${mi}:${ei}`;
           if (ev.kind === 'rest' || ev.hidden) return;
           ev._heads = ev.notes.map((n) => {
-            const pos = T.staffPos(n, st.clef);
+            const pos = T.staffPos(n, m.clef || st.clef);
             const k = n.letter + n.octave;
             const cur = k in accState ? accState[k] : T.keyAcc(score.key, n.letter);
             let acc = null;
             if (n.acc !== cur || (score.forceAcc && n.acc !== 0)) { acc = n.acc; accState[k] = n.acc; }
-            if (ev.tiedFrom) acc = null;
+            if (ev.tiedFrom || ev.tiedFromMidis?.includes(n.midi)) acc = null;
             return { n, pos, acc, dx: 0 };
           });
           const ps = ev._heads.map((x) => x.pos);
@@ -54,14 +54,15 @@
         });
       });
     });
-    // beam groups: consecutive eighth notes within one beat
+    // Beam eighths and sixteenths within each beat; use secondary beams for sixteenths.
     score.staves.forEach((st) => {
       st.measures.forEach((m) => {
         m._beams = [];
         let grp = [];
         const flush = () => { if (grp.length >= 2) m._beams.push(grp); else grp.forEach((e) => { e._flag = true; }); grp = []; };
         m.events.forEach((ev) => {
-          const isE = ev.kind !== 'rest' && !ev.hidden && ev.base === 'e' && !ev.dots;
+          ev._beamed = false;
+          const isE = ev.kind !== 'rest' && !ev.hidden && ['e', 's'].includes(ev.base) && !ev.dots;
           if (!isE) { flush(); return; }
           if (grp.length && Math.floor(grp[0].start + 1e-6) !== Math.floor(ev.start + 1e-6)) flush();
           grp.push(ev);
@@ -109,6 +110,7 @@
         if (ev._heads) {
           const accs = ev._heads.filter((x) => x.acc != null).length;
           if (accs) lead = Math.max(lead, 1.3 + (accs > 1 ? 1.0 : 0));
+          if (ev.arpeggio) lead += 1.1;
           if (ev._heads.some((x) => x.dx < 0)) lead = Math.max(lead, 1.3);
           if (ev._heads.some((x) => x.dx > 0)) extra = Math.max(extra, 1.1);
           headW = Math.max(headW, HEAD_W[ev.base]);
@@ -141,14 +143,20 @@
         const ps = ev._heads.map((x) => x.pos / 2);
         const top = Math.max(...ps), bot = Math.min(...ps);
         hi = Math.max(hi, top + (ev._stem === 1 ? 3.5 : 0.7) + (ev.stacc && ev._stem === -1 ? 1 : 0));
+        if (ev.fermata || ev.tuplet) hi = Math.max(hi, Math.max(4, top + (ev._stem === 1 ? 3.5 : 0.7)) + 1.8);
         lo = Math.min(lo, bot - (ev._stem === -1 ? 3.5 : 0.7) - (ev.stacc && ev._stem !== -1 ? 1 : 0));
+        if (ev.tie || ev.tiedFrom || ev.tiedFromMidis?.length) {
+          hi = Math.max(hi, top + 2.2);
+          lo = Math.min(lo, bot - 2.2);
+        }
         if (ev.fingers && o.showFingers) {
           if (st.hand === 'lh') fingersBelow = Math.max(fingersBelow, ev.fingers.length);
           else fingersAbove = Math.max(fingersAbove, ev.fingers.length);
         }
       });
     });
-    const above = Math.max(o.minAbove != null ? o.minAbove : 2.2, hi - 4 + 0.8) + (fingersAbove ? 0.7 + fingersAbove * 1.25 : 0);
+    const hasTempo = si === 0 && o.showTempo && sysMeasures.some((mi) => mi === 0 || (score.tempoChanges || []).some((c) => c.measure === mi + 1));
+    const above = Math.max(o.minAbove != null ? o.minAbove : 2.2, hi - 4 + 0.8) + (fingersAbove ? 0.7 + fingersAbove * 1.25 : 0) + (hasTempo ? 2.6 : 0) + (si === 0 && o.measureNumbersAll ? 1.6 : 0);
     let below = Math.max(o.minBelow != null ? o.minBelow : 2.2, -lo + 0.8);
     const rows = {};
     let yb = below;
@@ -179,7 +187,7 @@
       const { cols, end } = columnsFor(score, mi, o);
       const padL = mi === 0 && !o.barlines ? 1.0 : 1.4;
       const startRep = score.staves[0].measures[mi].startRepeat ? 1.4 : 0;
-      const endRep = score.staves[0].measures[mi].endRepeat ? 1.0 : 0;
+      const endRep = score.staves[0].measures[mi].endRepeat ? 1.0 : (score.caesuras || []).includes(mi + 1) ? 2.0 : 0;
       const natural = padL + startRep + cols.reduce((a, c) => a + c.lead + c.w, 0) + 0.3 + endRep;
       mData.push({ mi, cols, end, padL: padL + startRep, natural, endRep });
     }
@@ -190,7 +198,8 @@
     const maxPer = o.maxMeasuresPerLine || 99;
     mData.forEach((md) => {
       const header = braceW + clefW + keyW + (systems.length === 0 ? timeW : 0);
-      if (cur.length && (used + md.natural + header > availSp || cur.length >= maxPer)) {
+      const change = md.mi > 0 && ((score.doubleBars || []).includes(md.mi) || score.staves.some((st) => st.measures[md.mi].clef !== st.measures[md.mi - 1].clef) || (score.tempoChanges || []).some((c) => c.measure === md.mi + 1));
+      if (cur.length && (change || used + md.natural + header > availSp || cur.length >= maxPer)) {
         systems.push(cur); cur = []; used = 0;
       }
       cur.push(md);
@@ -239,16 +248,17 @@
       gMain.appendChild(g);
       // header
       score.staves.forEach((st, si) => {
+        const clef = st.measures[sys[0].mi].clef || st.clef;
         let hx = sysStartX + 0.6;
         if (o.clef) {
-          if (st.clef === 'treble') g.appendChild(glyph(G.gClef, hx * SP, yOf(si, 2), 'clef'));
+          if (clef === 'treble') g.appendChild(glyph(G.gClef, hx * SP, yOf(si, 2), 'clef'));
           else g.appendChild(glyph(G.fClef, hx * SP, yOf(si, 6), 'clef'));
           hx = sysStartX + clefW;
         } else hx = sysStartX + clefW;
         if (o.keySig && nSig) {
           const type = T.KEYS[score.key].type;
           T.KEYS[score.key].sig.forEach((_, i) => {
-            const pos = T.SIG_POS[type][st.clef][i];
+            const pos = T.SIG_POS[type][clef][i];
             g.appendChild(glyph(type === 'sharp' ? G.sharp : G.flat, (hx + i * 1.05) * SP, yOf(si, pos), 'keysig'));
           });
         }
@@ -284,7 +294,7 @@
             const eg = drawEvent(ev, ex, si, st, yOf, o, score);
             eg.setAttribute('data-ref', ev._ref);
             g.appendChild(eg);
-            const info = { ev, x: ex, si, sys: sIdx, g: eg, mi: md.mi, staffTop: tops[si], clef: st.clef, topY: ev._topY };
+            const info = { ev, x: ex, si, sys: sIdx, g: eg, mi: md.mi, staffTop: tops[si], clef: st.measures[md.mi].clef || st.clef, topY: ev._topY };
             evInfo.set(ev._ref, info);
             order.push(ev._ref);
           });
@@ -293,6 +303,15 @@
         score.staves.forEach((st, si) => {
           const m = st.measures[md.mi];
           (m && m._beams || []).forEach((grp) => drawBeam(g, grp, evInfo, si, yOf));
+          (m && m.tuplets || []).forEach((grp) => {
+            const first = evInfo.get(grp[0]._ref), last = evInfo.get(grp[2]._ref);
+            const x1 = first.x * SP - 2, x2 = (last.x + HEAD_W[last.ev.base]) * SP + 2;
+            const ty = Math.min(yOf(si, 8) - SP, ...grp.map((ev) => ev._topY == null ? yOf(si, 8) : ev._topY - SP));
+            const mid = (x1 + x2) / 2;
+            const bracket = S('g', { class: 'st-tuplet' });
+            bracket.append(line(x1, ty + 5, x1, ty, 1), line(x1, ty, mid - 7, ty, 1), line(mid + 7, ty, x2, ty, 1), line(x2, ty, x2, ty + 5, 1), text('3', mid, ty + 4, 'st-tuplet-number'));
+            g.appendChild(bracket);
+          });
         });
         // barline
         if (o.barlines) {
@@ -304,10 +323,20 @@
           else if (isFinal) {
             g.appendChild(rect((mEnd - 0.5) * SP - 0.5 * SP, top, 0.16 * SP, bot - top, 'st-bar'));
             g.appendChild(rect((mEnd - 0.5) * SP, top, 0.5 * SP, bot - top, 'st-bar'));
+          } else if ((score.doubleBars || []).includes(md.mi + 1)) {
+            g.appendChild(rect((mEnd - 0.5) * SP, top, 0.16 * SP, bot - top, 'st-bar st-double-bar'));
+            g.appendChild(rect((mEnd - 0.1) * SP, top, 0.16 * SP, bot - top, 'st-bar'));
           } else g.appendChild(rect(mEnd * SP - 0.08 * SP, top, 0.16 * SP, bot - top, 'st-bar'));
         }
-        if (o.measureNumbers && md === sys[0] && md.mi > 0) g.appendChild(text(String(md.mi + 1), (mStart + 0.2) * SP, yOf(0, 8) - 1.6 * SP, 'st-mnum', 'start'));
-        if (o.measureNumbersAll) g.appendChild(text(String(md.mi + 1), (mStart + 0.5) * SP, yOf(0, 8) - 1.4 * SP, 'st-mnum', 'start'));
+        const numberY = (tops[0] - ext[0].above + 1.2) * SP;
+        if (o.measureNumbers && md === sys[0] && md.mi > 0 && !o.measureNumbersAll) g.appendChild(text(String(md.mi + 1), (mStart + 0.2) * SP, numberY, 'st-mnum', 'start'));
+        if (o.measureNumbersAll) g.appendChild(text(String(md.mi + 1), (mStart + 0.5) * SP, numberY, 'st-mnum', 'start'));
+        const tempo = md.mi === 0 ? score.tempo : (score.tempoChanges || []).find((c) => c.measure === md.mi + 1)?.bpm;
+        if (o.showTempo && tempo) g.appendChild(text(`♩ = ${tempo}`, (mStart + 0.5) * SP, numberY + 1.8 * SP, 'st-tempo', 'start'));
+        if ((score.caesuras || []).includes(md.mi + 1)) {
+          const cy = yOf(0, 8), cx = (mEnd - 1.5) * SP;
+          g.appendChild(S('path', { d: `M ${cx} ${cy + 4} l 5 -14 M ${cx + 7} ${cy + 4} l 5 -14`, class: 'st-caesura', fill: 'none', stroke: 'currentColor', 'stroke-width': 1.6 }));
+        }
         x = mEnd;
       });
       const sysEnd = x;
@@ -452,7 +481,11 @@
           const tgt = first.g;
           if (o.autoScroll && tgt.scrollIntoView) {
             const r = tgt.getBoundingClientRect();
-            if (r.top < 60 || r.bottom > window.innerHeight - 60) tgt.scrollIntoView({ block: 'center', behavior: MC.util.reducedMotion() ? 'auto' : 'smooth' });
+            const behavior = MC.util.reducedMotion() ? 'auto' : 'smooth';
+            if (target && target.classList.contains('score-viewport')) {
+              const box = target.getBoundingClientRect();
+              if (r.top < box.top + 24 || r.bottom > box.bottom - 24) target.scrollTo({ top: target.scrollTop + r.top - box.top - target.clientHeight / 2, behavior });
+            } else if (r.top < 60 || r.bottom > window.innerHeight - 60) tgt.scrollIntoView({ block: 'center', behavior });
           }
         } else if (!refs.length) cursor.style.display = 'none';
       },
@@ -493,7 +526,7 @@
   function drawEvent(ev, x, si, st, yOf, o) {
     const g = S('g', { class: 'ev' + (ev.kind === 'rest' ? ' rest' : '') + (ev.cls ? ' ' + ev.cls : '') });
     if (ev.kind === 'rest') {
-      const ch = { w: G.restW, h: G.restH, q: G.restQ, e: G.rest8 }[ev.base];
+      const ch = { w: G.restW, h: G.restH, q: G.restQ, e: G.rest8, s: G.rest16 }[ev.base];
       const pos = ev.base === 'w' ? 6 : 4;
       g.appendChild(glyph(ch, x * SP, yOf(si, pos)));
       if (ev.dots) g.appendChild(S('circle', { cx: r3((x + 1.5) * SP), cy: r3(yOf(si, 5)), r: 0.2 * SP, class: 'st-fill' }));
@@ -543,7 +576,7 @@
       if (!ev._beamed) {
         const stem = rect(sx * SP, Math.min(yStart, yFar), 0.12 * SP, Math.abs(yFar - yStart), 'st-stem');
         g.appendChild(stem);
-        if (ev.base === 'e') g.appendChild(glyph(up ? G.flagUp : G.flagDown, sx * SP, yFar, 'flag'));
+        if (ev.base === 'e' || ev.base === 's') g.appendChild(glyph(ev.base === 's' ? (up ? G.flag16Up : G.flag16Down) : (up ? G.flagUp : G.flagDown), sx * SP, yFar, 'flag'));
       } else {
         const stem = rect(sx * SP, Math.min(yStart, yFar), 0.12 * SP, Math.abs(yFar - yStart), 'st-stem');
         stem.classList.add('beam-stem');
@@ -559,6 +592,19 @@
       const py = yOf(si, p % 2 === 0 ? (up ? p - 1 : p + 1) : p);
       g.appendChild(S('circle', { cx: r3((x + hw / 2) * SP), cy: r3(py), r: 0.22 * SP, class: 'st-fill' }));
       if (!up) topY = Math.min(topY, py - 0.4 * SP);
+    }
+    if (ev.arpeggio) {
+      const ax = (x - 0.8 - (accHeads.length ? 1.3 : 0)) * SP;
+      const ay = yOf(si, hi) - 0.6 * SP, end = yOf(si, lo) + 0.6 * SP;
+      let path = `M ${ax} ${ay}`;
+      for (let yy = ay; yy < end; yy += 7) path += ` q -4 1.75 0 3.5 q 4 1.75 0 3.5`;
+      g.appendChild(S('path', { d: path, class: 'st-arpeggio', fill: 'none', stroke: 'currentColor', 'stroke-width': 1.3 }));
+    }
+    if (ev.fermata) {
+      const fx = (x + hw / 2) * SP, fy = Math.min(yOf(si, 8) - SP, topY - SP);
+      g.appendChild(S('path', { d: `M ${fx - 7} ${fy} Q ${fx} ${fy - 14} ${fx + 7} ${fy}`, class: 'st-fermata', fill: 'none', stroke: 'currentColor', 'stroke-width': 1.4 }));
+      g.appendChild(S('circle', { cx: fx, cy: fy - 1, r: 1.7, class: 'st-fill' }));
+      topY = fy - 7;
     }
     // hit area
     g.appendChild(rect((x - 0.6) * SP, yOf(si, hi) - 1.1 * SP, (hw + 1.2) * SP, (yOf(si, lo) - yOf(si, hi)) + 2.2 * SP, 'hit'));
@@ -588,6 +634,21 @@
       ? [[x1, Y(x1)], [x2, Y(x2)], [x2, Y(x2) + th], [x1, Y(x1) + th]]
       : [[x1, Y(x1) - th], [x2, Y(x2) - th], [x2, Y(x2)], [x1, Y(x1)]];
     g.appendChild(S('polygon', { points: pts.map(([a, b]) => `${r3(a * SP)},${r3(b)}`).join(' '), class: 'st-beam' }));
+    // Consecutive sixteenths share the second beam; a lone one gets a short hook.
+    for (let i = 0; i < grp.length; i++) {
+      if (grp[i].base !== 's') continue;
+      let j = i;
+      while (j + 1 < grp.length && grp[j + 1].base === 's') j++;
+      let a = grp[i]._stemX, b = grp[j]._stemX + 0.12;
+      if (i === j) {
+        if (i === grp.length - 1) a -= Math.min(1, (a - grp[i - 1]._stemX) / 2);
+        else b += Math.min(1, (grp[i + 1]._stemX - b) / 2);
+      }
+      const offset = (up ? 1 : -1) * 0.85 * SP;
+      const y1b = Y(a) + offset, y2b = Y(b) + offset, depth = up ? th : -th;
+      g.appendChild(S('polygon', { points: [[a, y1b], [b, y2b], [b, y2b + depth], [a, y1b + depth]].map(([xx, yy]) => `${r3(xx * SP)},${r3(yy)}`).join(' '), class: 'st-beam st-beam-secondary' }));
+      i = j;
+    }
     grp.forEach((e) => {
       const yEnd = Y(e._stemX);
       const y0 = e._stemY0;
@@ -637,8 +698,9 @@
         if (e.tie && flat[i + 1]) {
           const nx = evInfo.get(flat[i + 1]._ref);
           if (nx) {
-            e._heads.forEach((hd) => {
-              const below = e._stem === 1 || (e._stem === 0 && hd.pos < 4);
+            e._heads.filter((hd) => !e.tieMidis || e.tieMidis.includes(hd.n.midi)).forEach((hd) => {
+              const upperVoice = e.tieMidis && e.tieMidis.length < e._heads.length && hd.pos === Math.max(...e._heads.map((h) => h.pos));
+              const below = !upperVoice && (e._stem === 1 || (e._stem === 0 && hd.pos < 4));
               const dir = below ? 1 : -1;
               const sy = sysInfo[info.sys];
               const y0 = sy.yOf(si, hd.pos) + dir * 0.55 * SP;

@@ -496,6 +496,11 @@ a.pre-chip:hover { border-color: var(--accent); color: var(--accent-ink); }
 .mg { font-family: 'BravuraMC'; fill: currentColor; }
 .staff-svg { display: block; max-width: 100%; height: auto; color: var(--ink); overflow: visible; }
 .staff-wrap { overflow-x: auto; padding: 4px 0; }
+.score-viewport { max-height: 52vh; min-height: 240px; overflow: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
+.score-viewport:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.st-tuplet line { stroke: currentColor; }
+.st-tuplet-number { font-family: var(--font-ui); font-size: 13px; fill: currentColor; }
+.st-tempo { font-family: var(--font-ui); font-size: 14px; font-weight: 650; fill: currentColor; }
 .st-line { fill: #5f5d68; }
 .st-bar, .st-stem, .st-beam, .st-ledger, .st-fill { fill: currentColor; }
 .st-ledger { fill: #3c3a44; }

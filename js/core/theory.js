@@ -186,19 +186,21 @@
   };
 
   /* ---------- Rhythm ---------- */
-  T.DUR = { w: 4, h: 2, q: 1, e: 0.5 };
-  T.DUR_NAME = { w: 'whole note', h: 'half note', q: 'quarter note', e: 'eighth note' };
-  T.REST_NAME = { w: 'whole rest', h: 'half rest', q: 'quarter rest', e: 'eighth rest' };
+  T.DUR = { w: 4, h: 2, q: 1, e: 0.5, s: 0.25 };
+  T.DUR_NAME = { w: 'whole note', h: 'half note', q: 'quarter note', e: 'eighth note', s: 'sixteenth note' };
+  T.REST_NAME = { w: 'whole rest', h: 'half rest', q: 'quarter rest', e: 'eighth rest', s: 'sixteenth rest' };
   T.beatsPerMeasure = (time) => (time[0] * 4) / time[1];
   T.VELOCITY = { pp: 0.3, p: 0.42, mp: 0.55, mf: 0.67, f: 0.82, ff: 0.95 };
   T.DYN_ORDER = ['pp', 'p', 'mp', 'mf', 'f', 'ff'];
   T.DYN_WORD = { pp: 'pianissimo — very soft', p: 'piano — soft', mp: 'mezzo piano — moderately soft', mf: 'mezzo forte — moderately loud', f: 'forte — loud', ff: 'fortissimo — very loud' };
 
-  const TOKEN = /^(\()?(\[[^\]]+\]|r|[A-G](?:bb|#|b|n|x)?-?\d)(w|h|q|e|m)(\.)?(~)?(\*)?(?:\/([0-9,]+))?(?:@(pp|p|mp|mf|f|ff))?(\))?$/;
+  const TOKEN = /^(\()?(\[[^\]]+\]|r|[A-G](?:bb|#|b|n|x)?-?\d)(w|h|q|e|s|m)(t)?(\.)?(~(?:\[[^\]]+\])?)?(\*)?(?:\/([0-9,]+))?(?:@(pp|p|mp|mf|f|ff))?(\))?$/;
 
   /* Parse one staff's voice string.
      Tokens: C4q  D4h.  rq  rm (whole-bar rest)  [C3,E3,G3]w  E4q/3 (finger)  E4q* (staccato)
      E4q~ (tie to next)  (E4q … G4q) (slur)  E4q@mf (dynamic)  < > (hairpin start) ! (hairpin end)
+     C4qt D4qt E4qt (three quarter-note triplets in two beats)
+     C4s (sixteenth)  rs (sixteenth rest)  [E4,E5]q~[E5] (tie only the upper E)
      |  |:  :|  (barlines and repeats) */
   T.parseVoice = function (str, bpm) {
     const errors = [];
@@ -219,10 +221,11 @@
       if (tok === '!') { if (lastEvent) lastEvent.hairpinEnd = true; continue; }
       const m = TOKEN.exec(tok);
       if (!m) { errors.push('Unreadable token: ' + tok); continue; }
-      const [, slurStart, body, base, dot, tie, stacc, fingers, dyn, slurEnd] = m;
+      const [, slurStart, body, base, triplet, dot, tie, stacc, fingers, dyn, slurEnd] = m;
       const ev = { kind: 'note', notes: [], base: base === 'm' ? 'w' : base, dots: dot ? 1 : 0 };
       if (base === 'm') { ev.measureRest = true; ev.dur = bpm; }
       else ev.dur = T.DUR[base] * (dot ? 1.5 : 1);
+      if (triplet) { ev.tuplet = 3; ev.dur *= 2 / 3; }
       if (body === 'r') { ev.kind = 'rest'; if (base === 'w' && !dot && bpm !== 4) errors.push('Use rm for a whole-bar rest outside 4/4'); }
       else if (body[0] === '[') {
         ev.kind = 'chord';
@@ -230,7 +233,7 @@
         ev.notes.sort((a, b) => T.diatonic(a) - T.diatonic(b));
       } else ev.notes = [T.parse(body)];
       if (ev.kind === 'chord' && ev.notes.length === 1) ev.kind = 'note';
-      if (tie) ev.tie = true;
+      if (tie) { ev.tie = true; ev.tieMidis = tie === '~' ? ev.notes.map((n) => n.midi) : tie.slice(2, -1).split(',').map((n) => T.midi(n)); }
       if (stacc) ev.stacc = true;
       if (fingers) ev.fingers = fingers.split(',').map(Number);
       if (dyn) ev.dyn = dyn;
@@ -245,6 +248,15 @@
       let t = 0;
       ms.events.forEach((ev) => { ev.start = t; t += ev.dur; });
       ms.total = t;
+      ms.tuplets = [];
+      for (let j = 0; j < ms.events.length; j++) {
+        const ev = ms.events[j];
+        if (!ev.tuplet) continue;
+        const group = ms.events.slice(j, j + 3);
+        if (group.length !== 3 || group.some((e) => e.tuplet !== 3 || e.base !== ev.base || e.dots || e.measureRest)) {
+          errors.push(`Measure ${i + 1}: a triplet needs three equal, undotted notes or rests`);
+        } else { ms.tuplets.push(group); j += 2; }
+      }
       if (ms.events.length === 1 && ms.events[0].kind === 'rest') { ms.events[0].measureRest = true; ms.events[0].base = 'w'; ms.events[0].dots = 0; }
       if (Math.abs(t - bpm) > 1e-6) errors.push(`Measure ${i + 1} has ${t} beats, expected ${bpm}`);
     });
@@ -259,6 +271,16 @@
     const staves = piece.staves.map((s, si) => {
       const r = T.parseVoice(s.voice, bpm);
       r.errors.forEach((e) => errors.push(`Staff ${si + 1}: ${e}`));
+      let clef = s.clef;
+      r.measures.forEach((m, mi) => {
+        if (s.clefChanges && s.clefChanges[mi + 1]) clef = s.clefChanges[mi + 1];
+        m.clef = clef;
+      });
+      (s.annotations || []).forEach((a) => {
+        const ev = r.measures[a.measure - 1]?.events[a.event || 0];
+        if (!ev) errors.push(`Staff ${si + 1}: annotation outside score`);
+        else { ev.fermata = !!a.fermata; ev.arpeggio = !!a.arpeggio; }
+      });
       return { clef: s.clef, hand: s.hand || (s.clef === 'bass' ? 'lh' : 'rh'), measures: r.measures };
     });
     const count = Math.max(...staves.map((s) => s.measures.length));
@@ -275,12 +297,19 @@
       flat.forEach((e, i) => {
         if (!e.tie) return;
         const nx = flat[i + 1];
-        if (!nx || nx.kind === 'rest' || nx.notes.map((n) => n.midi).join() !== e.notes.map((n) => n.midi).join()) {
+        if (!e.tieMidis.length || !nx || nx.kind === 'rest' || e.tieMidis.some((midi) => !e.notes.some((n) => n.midi === midi) || !nx.notes.some((n) => n.midi === midi))) {
           errors.push(`Staff ${si + 1}: tie without a matching next note`);
-        } else nx.tiedFrom = true;
+        } else {
+          nx.tiedFromMidis = e.tieMidis.slice();
+          nx.tiedFrom = nx.notes.every((n) => nx.tiedFromMidis.includes(n.midi));
+        }
       });
     });
-    return { key: piece.key || 'C', time, bpm, staves, count, errors, tempo: piece.tempo || 80 };
+    const tempoChanges = piece.tempoChanges || [];
+    tempoChanges.forEach((c) => {
+      if (!Number.isInteger(c.measure) || c.measure < 1 || c.measure > count || !(c.bpm > 0)) errors.push('Invalid tempo change');
+    });
+    return { key: piece.key || 'C', time, bpm, staves, count, errors, tempo: piece.tempo || 80, tempoChanges, doubleBars: piece.doubleBars || [], caesuras: piece.caesuras || [] };
   };
 
   /* Measure order after expanding simple repeats. */
@@ -337,23 +366,28 @@
         if (!m) return;
         m.events.forEach((e, ei) => {
           if (e.kind !== 'rest' && active) {
-            // sounding duration: extend through ties
-            let d = e.dur;
-            if (e.tie) {
-              let k = ei, mm = mi, cur = e;
-              while (cur && cur.tie) {
+            // Extend each pitch separately: one chord tone may sustain while another repeats.
+            const noteDurations = {};
+            e.notes.forEach((n) => {
+              let d = e.dur, k = ei, mm = mi, cur = e;
+              while (cur && cur.tie && (cur.tieMidis || cur.notes.map((x) => x.midi)).includes(n.midi)) {
                 let nx = st.measures[mm].events[k + 1];
-                if (!nx) { mm = mm + 1; k = -1; nx = st.measures[mm] && st.measures[mm].events[0]; }
-                if (!nx) break;
-                d += nx.dur; k += 1; cur = nx;
+                if (!nx) { mm++; k = -1; nx = st.measures[mm] && st.measures[mm].events[0]; }
+                if (!nx || !nx.notes.some((x) => x.midi === n.midi)) break;
+                d += nx.dur; k++; cur = nx;
               }
-            }
+              noteDurations[n.midi] = d;
+            });
+            const tiedMidis = e.tiedFromMidis || (e.tiedFrom ? e.notes.map((n) => n.midi) : []);
             items.push({
               t: offset + e.start,
-              d,
-              midis: e.tiedFrom ? [] : e.notes.map((n) => n.midi),
+              d: Math.max(...Object.values(noteDurations)),
+              noteDurations,
+              midis: e.notes.map((n) => n.midi).filter((midi) => !tiedMidis.includes(midi)),
+              tiedMidis,
               tiedFrom: !!e.tiedFrom,
               stacc: !!e.stacc,
+              spread: e.arpeggio ? 0.055 : 0,
               vel: velAt.get(e) || T.VELOCITY.mf,
               staff: si,
               hand: st.hand,
@@ -371,7 +405,44 @@
     });
     items.sort((a, b) => a.t - b.t || a.staff - b.staff);
     const total = order.length * score.bpm;
-    return { items, total, order };
+    const tempoMap = [];
+    order.forEach((mi, pass) => {
+      let tempo = score.tempo;
+      (score.tempoChanges || []).forEach((c) => { if (c.measure <= mi + 1) tempo = c.bpm; });
+      const ratio = tempo / score.tempo;
+      if (!tempoMap.length || tempoMap[tempoMap.length - 1].ratio !== ratio) tempoMap.push({ t: pass * score.bpm, ratio });
+    });
+    return { items, total, order, tempoMap };
+  };
+
+  /* Crop at measure boundaries, including the active tempo and any held opening notes. */
+  T.sliceTimeline = function (tl, from, to) {
+    const items = tl.items.filter((it) => it.t >= from && it.t < to).map((it) => {
+      const resume = (it.tiedFrom || it.tiedMidis?.length) && Math.abs(it.t - from) < 1e-6;
+      return Object.assign({}, it, { t: it.t - from, d: Math.min(it.d, to - it.t),
+        noteDurations: Object.fromEntries(Object.entries(it.noteDurations || {}).map(([midi, d]) => [midi, Math.min(d, to - it.t)])),
+        tiedFrom: resume ? false : it.tiedFrom, midis: resume ? it.notes.map((n) => n.midi) : it.midis });
+    });
+    const map = tl.tempoMap || [{ t: 0, ratio: 1 }];
+    const active = map.filter((c) => c.t <= from).pop() || map[0];
+    const tempoMap = [{ t: 0, ratio: active.ratio }, ...map.filter((c) => c.t > from && c.t < to).map((c) => ({ t: c.t - from, ratio: c.ratio }))];
+    return { items, total: to - from, tempoMap };
+  };
+
+  /* Piecewise tempo clock. Ratios let the speed slider scale every written tempo. */
+  T.tempoClock = function (bpm, changes) {
+    const map = [{ t: 0, ratio: 1 }, ...(changes || [])].sort((a, b) => a.t - b.t)
+      .filter((c, i, all) => i === all.length - 1 || c.t !== all[i + 1].t)
+      .map((c) => ({ ...c, seconds: 0, secondsPerBeat: 60 / (bpm * c.ratio) }));
+    for (let i = 1; i < map.length; i++) map[i].seconds = map[i - 1].seconds + (map[i].t - map[i - 1].t) * map[i - 1].secondsPerBeat;
+    const at = (b) => map.filter((c) => c.t <= b).pop() || map[0];
+    const seconds = (b) => { const c = at(b); return c.seconds + (b - c.t) * c.secondsPerBeat; };
+    return {
+      seconds,
+      beat(s) { const c = map.filter((p) => p.seconds <= s).pop() || map[0]; return c.t + (s - c.seconds) / c.secondsPerBeat; },
+      between(a, b) { return seconds(b) - seconds(a); },
+      bpmAt(b) { return bpm * at(b).ratio; },
+    };
   };
 
   /* Group timeline items into onsets (same time) that require key presses. */
@@ -424,7 +495,7 @@
       end: [[3], [1, 2]],
     },
   };
-  const DUR_TOKEN = { 4: 'w', 3: 'h.', 2: 'h', 1: 'q', 0.5: 'e' };
+  const DUR_TOKEN = { 4: 'w', 3: 'h.', 2: 'h', 1: 'q', 0.75: 'e.', 0.5: 'e', 0.25: 's' };
   T.durToken = (d) => DUR_TOKEN[d];
 
   /* Generate a short, singable five-finger melody.
