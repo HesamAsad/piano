@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Notation test</title>
+<link rel="stylesheet" href="../css/bravura.css">
+<link rel="stylesheet" href="../css/app.css">
+<style>body{padding:20px} .t{margin:18px 0; background:#fff; padding:10px; border:1px solid #ddd}</style>
+</head>
+<body>
+<h1>Notation renderer test</h1>
+<div id="out"></div>
+<script>window.MC_BASE = '../';</script>
+<script src="../js/core/util.js"></script>
+<script src="../js/core/theory.js"></script>
+<script src="../js/core/store.js"></script>
+<script src="../js/core/audio.js"></script>
+<script src="../js/core/input.js"></script>
+<script src="../js/ui/keyboard.js"></script>
+<script src="../js/ui/staff.js"></script>
+<script>
+  MC.store.load();
+  const out = document.getElementById('out');
+  function box(title) { const d = document.createElement('div'); d.className = 't'; d.innerHTML = '<b>' + title + '</b>'; const c = document.createElement('div'); d.appendChild(c); out.appendChild(d); return c; }
+  const T = MC.theory;
+  const tests = [
+    ['Treble scale C4-C6 whole', { clef: 'treble', notes: ['C4','D4','E4','F4','G4','A4','B4','C5','D5','E5','F5','G5','A5','B5','C6'] }],
+    ['Bass G2..C4 + low', { clef: 'bass', notes: ['E2','F2','G2','A2','B2','C3','D3','E3','F3','G3','A3','B3','C4','D4'] }],
+    ['Accidentals', { clef: 'treble', notes: ['F#4','Bb4','Cn5', 'C#5', {n:'D#4', dur:'q'}, {n:'Gb5', dur:'h'}], forceAcc: true }],
+    ['Chords', { clef: 'treble', notes: [{chord:['C4','E4','G4']}, {chord:['F4','A4','C5'], dur:'h'}, {chord:['G4','B4','D5'], dur:'q'}, {chord:['C4','D4','E4'], dur:'q'}, {chord:['B4','C5'], dur:'h'}, {chord:['D4','F#4','A4']}] }],
+    ['Grand notes', { clef: 'grand', notes: ['C4','C3','G4','F3','C5', {n:'C4', staff:1}] }],
+  ];
+  tests.forEach(([t, spec]) => MC.Staff.notes(box(t), spec, { showNames: true }));
+  const pieces = [
+    { title: 'Mary (names, fingers, counts)', key: 'C', time: [4,4], staves: [{ clef: 'treble', voice: 'E4q/3 D4q/2 C4q/1 D4q/2 | E4q E4q E4h | D4q D4q D4h | E4q G4q/5 G4h | E4q D4q C4q D4q | E4q E4q E4q E4q | D4q D4q E4q D4q | C4w' }] },
+    { title: 'Rhythm: eighths, rests, dotted', key: 'C', time: [4,4], staves: [{ clef: 'treble', voice: 'C4e C4e D4e D4e E4q rq | G4e A4e B4e C5e D5q E5q | rh E4h | F4h. rq | A5e G5e F5e E5e D5h | rw' }] },
+    { title: '3/4 with dotted half, G major', key: 'G', time: [3,4], staves: [{ clef: 'treble', voice: 'G4q A4q B4q | C5h B4q | A4h. | F#4q G4q A4q | G4h.' }] },
+    { title: 'F major, bass', key: 'F', time: [4,4], staves: [{ clef: 'bass', voice: 'F3q G3q A3q Bb3q | C4h A3h | Bb2q B2q C3h | F2w' }] },
+    { title: 'Grand staff, chords, tie, slur, dynamics, repeat', key: 'C', time: [4,4], staves: [
+      { clef: 'treble', voice: '|: (E4q/3@p E4q F4q G4q) | < G4q F4q E4q D4q ! | C4q* C4q* D4q* E4q* | E4h~ E4q D4q :| C4w@f' },
+      { clef: 'bass', voice: '|: [C3,E3,G3]w/5,3,1 | [B2,D3,G3]w/5,3,1 | [C3,E3,G3]h [C3,F3,A3]h/5,2,1 | [B2,D3,G3]w :| [C3,E3,G3]w' } ] },
+  ];
+  pieces.forEach((p) => {
+    const sc = T.buildScore(p);
+    if (sc.errors.length) console.warn(p.title, sc.errors);
+    const api = MC.Staff.render(box(p.title + (sc.errors.length ? ' ERR ' + sc.errors.join('; ') : '')), sc, { showNames: true, showCounts: true, showFingers: true, handLabels: true, onNoteClick: (ev) => console.log('click', ev.notes.map(n => T.name(n))) });
+  });
+  const kb = MC.Keyboard({ from: 48, to: 76, labels: 'white', fingers: { 60: 1, 62: 2, 64: 3, 65: 4, 67: 5 } });
+  box('Keyboard C3–E5').appendChild(kb.el);
+  kb.setMark(61, 'target', '?');
+  kb.setMark(64, 'ok', '✓');
+  const pick = box('Picker');
+  MC.Staff.picker(pick, { clef: 'treble', onPick: (p, n) => console.log('pick', p, T.name(n)) });
+</script>
+</body>
+</html>

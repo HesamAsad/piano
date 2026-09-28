@@ -1,0 +1,15 @@
+Piano sound samples
+
+Salamander Grand Piano V3 — recorded by Alexander Holm.
+Source: https://archive.org/details/SalamanderGrandPianoV3
+License: Creative Commons Attribution 3.0 Unported (CC BY 3.0)
+         https://creativecommons.org/licenses/by/3.0/
+
+MP3 conversion: @audio-samples/piano-mp3-velocity8 v1.0.5 by Jan Forst
+(https://github.com/darosh/samples-piano-mp3), packaging released under the MIT License
+(see piano-mp3-velocity8-MIT.txt).
+
+Changes made for this app (tools/build-samples.sh): kept one recording every three
+semitones from C2 to C7 (21 files, velocity layer 8), mixed to mono, raised by 6 dB,
+trimmed to 3–5.5 seconds with a fade-out, and re-encoded at 64 kbps. Notes between
+recordings are produced by pitch-shifting the nearest recording.
