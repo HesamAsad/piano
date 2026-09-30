@@ -294,6 +294,23 @@
     };
   };
 
+  G.chordNumeral = (p) => {
+    const pool = MC.study.chords.filter((c) => ['I', 'IV', 'V', 'vi'].includes(c.numeral));
+    const chord = pool.find((c) => c.numeral === p.numeral) || T.pick(pool);
+    return {
+      skill: 'chords', item: 'numeral:C:' + chord.numeral, sig: chord.numeral,
+      reviewParams: { numeral: chord.numeral },
+      prompt: `In <strong>C major</strong>, which chord is <strong>${chord.numeral}</strong>?`,
+      hint: 'Count the root along C D E F G A B: I is C, IV is F, V is G and vi is Am. Uppercase means major; lowercase means minor.',
+      render(ui) {
+        ui.choices(pool.map((c) => ({ label: c.name, value: c.numeral })), (v) => ui.submit({
+          correct: v === chord.numeral, answer: chord.numeral,
+          msg: `${chord.numeral} is <strong>${chord.name}</strong> in C major: ${chord.notes.map((n) => T.name(T.parse(n), false)).join('–')}. Its root is scale degree ${MC.study.chords.indexOf(chord) + 1}; the chord is ${chord.quality}.`,
+        }));
+      },
+    };
+  };
+
   G.keySig = (p) => {
     const keys = p.keys || ['C', 'G', 'F'];
     const key = T.pick(keys);

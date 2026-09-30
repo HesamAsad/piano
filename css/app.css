@@ -498,6 +498,8 @@ a.pre-chip:hover { border-color: var(--accent); color: var(--accent-ink); }
 .staff-wrap { overflow-x: auto; padding: 4px 0; }
 .score-viewport { max-height: 52vh; min-height: 240px; overflow: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
 .score-viewport:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.vocal-score .staff-svg { max-width: none; }
+.score-pan-hint { margin: 0; }
 .st-tuplet line { stroke: currentColor; }
 .st-tuplet-number { font-family: var(--font-ui); font-size: 13px; fill: currentColor; }
 .st-tempo { font-family: var(--font-ui); font-size: 14px; font-weight: 650; fill: currentColor; }
@@ -679,6 +681,7 @@ a.pre-chip:hover { border-color: var(--accent); color: var(--accent-ink); }
 
 /* Piece player */
 .player { display: grid; gap: 14px; }
+.player > .stage { min-width: 0; }
 .player-bar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface-2); }
 .player-status { font-size: 0.95rem; min-height: 1.5em; }
 .results { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
@@ -830,3 +833,59 @@ table.progress-table tbody tr:hover { background: var(--surface-2); }
   * { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
 }
 .reduce-motion * { transition: none !important; animation: none !important; }
+
+/* Teaching cues and the seven-topic companion guide. */
+.study-head { max-width: 820px; }
+.study-head h1 { font-size: clamp(2.1rem, 1.4rem + 2.3vw, 3.5rem); margin: 8px 0 16px; }
+.study-head .lede { max-width: 720px; }
+.study-method { list-style: none; padding: 0; margin: 26px 0; display: flex; flex-wrap: wrap; gap: 12px 28px; }
+.study-method li { display: flex; align-items: center; gap: 10px; font-size: 0.9rem; color: var(--ink-2); }
+.study-method li > span { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent-ink); font-weight: 700; }
+.study-topics { display: flex; flex-wrap: wrap; gap: 8px; padding: 20px 0; border-top: 1px solid var(--line-strong); }
+.study-topics a { text-decoration: none; color: var(--ink-2); padding: 7px 13px; border: 1px solid var(--line-strong); border-radius: 999px; font-size: 0.84rem; background: var(--surface); }
+.study-topics a[aria-current="page"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.study-topics a:hover { border-color: var(--accent); }
+.study-search { display: grid; gap: 6px; max-width: 580px; }
+.study-search label { font-size: 0.8rem; font-weight: 650; }
+.study-search input { min-width: 0; width: 100%; padding: 12px 14px; border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--surface); color: var(--ink); font: inherit; font-size: 1rem; }
+.study-count { margin: 8px 0 28px; }
+.study-section { margin-bottom: 34px; }
+.study-section-head { display: flex; gap: 14px; align-items: flex-start; margin-bottom: 16px; }
+.study-section-head h2 { margin-bottom: 5px; }
+.study-section-head p { margin: 0; }
+.study-topic-number { font-family: var(--font-head); font-size: 1.4rem; color: var(--lh); border-top: 2px solid var(--lh); padding-top: 2px; line-height: 1.3; }
+.study-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
+.study-card { min-width: 0; padding: 24px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); }
+.study-card h3 { font-size: 1.3rem; margin-bottom: 14px; }
+.study-memory-line { border-left: 3px solid var(--lh); background: var(--lh-soft); color: var(--lh-ink); padding: 12px 14px; font-weight: 600; border-radius: 0 9px 9px 0; }
+.study-card .more { background: var(--surface-2); }
+.study-card > .link-arrow { display: inline-block; margin-top: 2px; }
+.study-try h4, .study-recall h4 { font: 700 0.76rem/1.4 var(--font-ui); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 6px; color: var(--accent-ink); }
+.study-try { margin: 18px 0; }
+.study-try p, .study-recall p { font-size: 0.94rem; }
+.study-recall { border-top: 1px solid var(--line); padding-top: 16px; }
+.study-recall .more { background: var(--surface); margin-bottom: 10px; }
+.study-recall .more-body p:last-child { margin-bottom: 0; }
+.study-memory { background: var(--warn-soft); border: 1px solid var(--warn-line); padding: 14px 16px; border-radius: var(--radius); margin: 16px 0; }
+.study-memory .eyebrow { color: var(--warn); }
+.study-memory p { margin: 5px 0 0; font-weight: 550; }
+.lesson-coach { border-top: 1px solid var(--line); margin-top: 24px; padding-top: 22px; }
+.lesson-coach > div > p { font-size: 0.95rem; color: var(--ink-2); }
+.lesson-coach .study-try { background: var(--accent-soft); padding: 14px 16px; border-radius: var(--radius); }
+.lesson-coach .study-try p { margin: 0; }
+.study-invitation { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin: 20px 0; padding: 22px 24px; background: var(--lh-soft); border: 1px solid var(--lh-soft-2); border-radius: var(--radius-lg); }
+.study-invitation h2 { font-size: 1.25rem; }
+.study-invitation p { margin: 0; font-size: 0.9rem; color: var(--ink-2); max-width: 620px; }
+.study-invitation .btn { flex-shrink: 0; }
+.practice-log-row { margin-top: 14px; }
+.chord-roadmap { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; list-style: none; padding: 0; margin: 0 0 18px; }
+.chord-roadmap li { display: grid; text-align: center; gap: 2px; padding: 10px 6px; border: 1px solid var(--accent-soft-2); background: var(--accent-soft); border-radius: var(--radius); }
+.chord-roadmap strong { font: 600 1.7rem/1.2 var(--font-head); color: var(--accent-ink); }
+.chord-roadmap .small { font-size: 0.75rem; }
+@media (max-width: 700px) {
+  .study-grid { grid-template-columns: 1fr; }
+  .study-card { padding: 20px; }
+  .study-invitation { align-items: flex-start; flex-direction: column; gap: 14px; padding: 20px; }
+  .study-method { gap: 10px 18px; }
+  .study-head h1 { max-width: 16ch; }
+}

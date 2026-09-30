@@ -441,8 +441,10 @@
             else (e.midis || []).forEach((m, i) => {
               const d = e.durations?.[i] ?? e.d;
               const heldBeats = e.stacc ? Math.min(d, 0.5) * 0.5 : d;
-              const durSec = this.secondsBetween(e.t, e.t + heldBeats) * (e.stacc ? 1 : 0.94);
-              this.voiceIds.push(A.play(m, durSec, (e.vel || 0.65) * vel, t + (e.spread || 0) * i));
+              const durSec = this.secondsBetween(e.t, e.t + heldBeats) * (e.stacc || e.pedaled ? 1 : 0.94);
+              const rollIndex = e.rollDown ? e.midis.length - 1 - i : i;
+              const delay = (e.spread || 0) * rollIndex;
+              this.voiceIds.push(A.play(m, e.pedaled ? Math.max(0.05, durSec - delay) : durSec, (e.vel || 0.65) * vel, t + delay));
             });
           }
           this.nextIdx++;

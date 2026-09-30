@@ -10,7 +10,8 @@
   MC.PiecePlayer = function (piece, opts) {
     const o = Object.assign({ mode: 'watch', modes: ['watch', 'guided', 'independent'], names: null, hands: null, onResult: null, showInfo: true, timed: false, speed: null, keyHints: true, lockMode: false, handsOnKeys: null }, opts);
     const score = T.buildScore(piece);
-    const handsAvail = [...new Set(score.staves.map((s) => s.hand))];
+    const handsAvail = [...new Set(score.staves.map((s) => s.hand).filter((hand) => hand !== 'vocal'))];
+    const hasVocal = score.staves.some((s) => s.hand === 'vocal');
     const twoHands = handsAvail.length > 1;
     const st = {
       mode: o.mode,
@@ -22,6 +23,7 @@
       countIn: true,
       timed: o.timed,
       other: twoHands,
+      vocal: hasVocal,
       from: 0,
       to: score.count - 1,
       cursor: true,
@@ -29,6 +31,7 @@
     };
     const root = h('div.player');
     const staffHost = h('div.staff-wrap');
+    if (hasVocal) staffHost.classList.add('vocal-score');
     if (score.count > 16) {
       staffHost.classList.add('score-viewport');
       staffHost.setAttribute('tabindex', '0');
@@ -45,6 +48,7 @@
     let tr = null;
     let unsub = null;
     let session = null;
+    let disposed = false;
 
     // keyboard range from the notes
     const allMidis = [];
@@ -55,6 +59,11 @@
     if (T.mod(hi, 12) !== 0 && T.mod(hi, 12) !== 4) hi = Math.ceil(hi / 12) * 12;
 
     const activeHands = () => (st.hands === 'both' ? handsAvail : [st.hands]);
+    const accompaniment = () => [...new Set([
+      ...(st.other && st.hands !== 'both' ? handsAvail.filter((hand) => hand !== st.hands) : []),
+      ...(st.vocal && st.hands !== 'vocal' ? ['vocal'] : []),
+    ])];
+    const listeningHands = () => [...activeHands(), ...(st.vocal && st.hands !== 'vocal' ? ['vocal'] : [])];
 
     /* ---------- Hands on the keys, following the written fingering ----------
        Each fingered note fixes where that finger rests; the other fingers take the neighbouring
@@ -128,7 +137,7 @@
     }
 
     function renderStaff() {
-      const act = activeHands();
+      const act = st.mode === 'watch' ? listeningHands() : activeHands();
       staff = MC.Staff.render(staffHost, score, {
         showNames: st.names ? (ev, si) => (act.includes(score.staves[si].hand) ? ev.notes.slice().reverse().map((n) => T.name(n, false)).join('\n') : '') : false,
         showFingers: true,
@@ -161,8 +170,9 @@
         optsRow.appendChild(MC.util.segmented(o.modes.map((m) => ({ value: m, label: { watch: 'Watch & listen', guided: 'Play with guidance', independent: 'Try independently' }[m] })), st.mode, (v) => { st.mode = v; if (v === 'independent') { st.names = false; st.showHands = false; } else st.showHands = o.handsOnKeys !== false; if (v === 'guided' && o.names !== false) st.names = true; stopAll(); renderAll(); }, 'Practice mode'));
       }
       if (twoHands) {
-        optsRow.appendChild(MC.util.segmented([{ value: 'rh', label: 'Right hand' }, { value: 'lh', label: 'Left hand' }, { value: 'both', label: 'Both' }], st.hands, (v) => { st.hands = v; stopAll(); renderAll(); }, 'Which hands'));
+        optsRow.appendChild(MC.util.segmented([{ value: 'rh', label: 'Right hand' }, { value: 'lh', label: 'Left hand' }, { value: 'both', label: 'Both' }, ...(hasVocal ? [{ value: 'vocal', label: 'Vocal melody' }] : [])], st.hands, (v) => { st.hands = v; stopAll(); renderAll(); }, 'Which hands'));
       }
+      if (hasVocal && st.hands !== 'vocal') optsRow.appendChild(h('label.check', null, h('input', { type: 'checkbox', checked: st.vocal || null, onchange: (e) => { st.vocal = e.target.checked; stopAll(); renderAll(); } }), 'Hear vocal melody'));
       optsRow.appendChild(h('label.check', null, h('input', { type: 'checkbox', checked: st.names || null, onchange: (e) => { st.names = e.target.checked; stopAll(); renderAll(); } }), 'Note names'));
       if (fingerPlan.size) optsRow.appendChild(h('label.check', null, h('input', { type: 'checkbox', checked: st.showHands || null, onchange: (e) => { st.showHands = e.target.checked; handsKey = null; showHands(); if (session) showTarget(); } }), 'Hands on the keys'));
       if (st.mode === 'guided') optsRow.appendChild(h('label.check', null, h('input', { type: 'checkbox', checked: st.keyHints || null, onchange: (e) => { st.keyHints = e.target.checked; if (session) showTarget(); } }), 'Light up the next key'));
@@ -173,7 +183,7 @@
         optsRow.appendChild(MC.util.slider('Speed', 40, 120, 5, st.speed, (v) => { st.speed = v; if (tr) tr.setBpm(bpm()); }, (v) => `${v}% (${tempoLabel(v)})`));
         optsRow.appendChild(h('label.check', null, h('input', { type: 'checkbox', checked: st.metronome || null, onchange: (e) => { st.metronome = e.target.checked; } }), 'Metronome'));
       }
-      if (twoHands && st.hands !== 'both' && st.mode !== 'watch') optsRow.appendChild(h('label.check', null, h('input', { type: 'checkbox', checked: st.other || null, onchange: (e) => { st.other = e.target.checked; } }), 'Hear the other hand'));
+      if (twoHands && st.hands !== 'both' && st.mode !== 'watch') optsRow.appendChild(h('label.check', null, h('input', { type: 'checkbox', checked: st.other || null, onchange: (e) => { st.other = e.target.checked; stopAll(); renderAll(); } }), st.hands === 'vocal' ? 'Hear piano accompaniment' : 'Hear the other hand'));
       if (score.count > 2) {
         if (piece.sections) {
           const sections = [{ label: piece.excerpt ? 'Full excerpt' : 'Full piece', from: 1, to: score.count }, ...piece.sections];
@@ -230,20 +240,20 @@
     let lit = [];
     function clearLit() { lit.forEach((m) => kb && kb.unmark(m, 'play')); lit = []; if (kb) kb.pressFinger(null); }
     function playPreview() {
-      const tl = timeline(handsAvail);
+      const tl = timeline([...new Set([...activeHands(), ...accompaniment()])]);
       startTransport(tl, { sound: true, highlight: true, speed: st.speed });
     }
     function togglePlay() {
       if (tr && tr.playing) { tr.pause(); renderBar(); status.textContent = 'Paused.'; return; }
       if (tr && tr.pos > 0) { tr.play(); renderBar(); return; }
-      startTransport(timeline(), { sound: true, highlight: true });
+      startTransport(timeline(listeningHands()), { sound: true, highlight: true });
       renderBar();
     }
     function startTransport(tl, cfg) {
       if (tr) tr.stop(true);
       A.ensure();
       const active = [];
-      const events = tl.items.map((it) => ({ t: it.t, d: it.d, midis: it.midis, durations: it.midis.map((m) => it.noteDurations?.[m] ?? it.d), vel: it.vel, stacc: it.stacc, spread: it.spread, data: it, silent: cfg.silentHands ? cfg.silentHands.includes(it.hand) : !cfg.sound }));
+      const events = tl.items.map((it) => ({ t: it.t, d: it.d, midis: it.midis, durations: it.midis.map((m) => it.soundDurations?.[m] ?? it.noteDurations?.[m] ?? it.d), keyDurations: it.midis.map((m) => it.noteDurations?.[m] ?? it.d), pedaled: it.pedaled, vel: it.vel, stacc: it.stacc, spread: it.spread, rollDown: it.rollDown, data: it, silent: cfg.silentHands ? cfg.silentHands.includes(it.hand) : !cfg.sound }));
       tr = new A.Transport({
         bpm: bpm(), tempoMap: tl.tempoMap, events, beatsPerBar: score.time[0], metronome: st.metronome || !!cfg.metronome, countIn: cfg.countIn || 0, end: tl.total,
         onEvent: (e) => {
@@ -263,7 +273,7 @@
           for (let i = active.length - 1; i >= 0; i--) {
             const e = active[i];
             e.midis.forEach((m, k) => {
-              if (e.litMidis.has(m) && b >= e.t + e.durations[k] - 0.02) {
+              if (e.litMidis.has(m) && b >= e.t + e.keyDurations[k] - 0.02) {
                 e.litMidis.delete(m);
                 if (kb && !active.some((x) => x !== e && x.litMidis.has(m))) { kb.unmark(m, 'play'); kb.pressFinger(m, false); }
               }
@@ -287,7 +297,7 @@
       staff.clearMarks();
       const tl = timeline();
       const onsets = T.onsets(tl);
-      const other = st.other && st.hands !== 'both' ? T.onsets(timeline(handsAvail.filter((x) => x !== st.hands))) : [];
+      const other = T.onsets(timeline(accompaniment()));
       session = { guided, onsets, idx: 0, pressed: new Set(), firstTry: 0, errors: 0, errOnset: false, other, tempo: T.tempoClock(bpm(), tl.tempoMap) };
       showTarget();
       status.textContent = guided
@@ -328,7 +338,7 @@
           const nextT = s.onsets[s.idx + 1] ? s.onsets[s.idx + 1].t : Infinity;
           s.other.filter((x) => x.t >= on.t - 1e-6 && x.t < nextT - 1e-6).forEach((x) => {
             const delay = s.tempo.between(on.t, x.t);
-            x.items.forEach((it) => it.midis.forEach((m, i) => A.play(m, s.tempo.between(x.t, x.t + (it.noteDurations?.[m] ?? it.d)) * 0.9, it.vel, A.now() + delay + (it.spread || 0) * i)));
+            x.items.forEach((it) => it.midis.forEach((m, i) => A.play(m, s.tempo.between(x.t, x.t + (it.soundDurations?.[m] ?? it.noteDurations?.[m] ?? it.d)) * 0.9, it.vel, A.now() + delay + (it.spread || 0) * (it.rollDown ? it.midis.length - 1 - i : i))));
           });
           s.idx++;
           s.pressed = new Set();
@@ -382,8 +392,8 @@
       const onsets = T.onsets(tl);
       const notes = [];
       const lat = MC.timing.latency();
-      const otherTl = st.other && st.hands !== 'both' ? timeline(handsAvail.filter((x) => x !== st.hands)) : null;
-      const playTl = otherTl ? { ...tl, items: tl.items.concat(otherTl.items) } : tl;
+      const otherTl = accompaniment().length ? timeline(accompaniment()) : null;
+      const playTl = otherTl ? { ...tl, items: tl.items.concat(otherTl.items).sort((a, b) => a.t - b.t || a.staff - b.staff) } : tl;
       unsub = I.subscribe((ev) => {
         if (ev.type !== 'on' || !tr) return;
         const t = tr.silent ? ev.time / 1000 : A.perfToCtx(ev.time);
@@ -468,10 +478,12 @@
       root.append(h('div', null, h('h3', { style: { margin: 0 } }, piece.title), h('div.small.muted', null, meta), piece.note ? h('p.small', { style: { margin: '6px 0 0' } }, piece.note) : null));
     }
     if (score.errors.length) root.append(h('div.banner', null, 'Notation error: ' + score.errors.join('; ')));
-    root.append(optsRow, h('div.stage.stage-tight', null, staffHost), bar, status, kbHost, results);
+    root.append(optsRow);
+    if (hasVocal) root.append(h('p.small.muted.score-pan-hint', null, 'Scroll the score to follow the music. On narrow screens, scroll sideways to see the rest of a measure.'));
+    root.append(h('div.stage.stage-tight', null, staffHost), bar, status, kbHost, results);
     MC.util.onCleanup(stopAll);
     // Render once attached (so widths are known)
-    requestAnimationFrame(() => renderAll());
-    return { el: root, stop: stopAll, setMode(m) { st.mode = m; stopAll(); renderAll(); } };
+    requestAnimationFrame(() => { if (!disposed) renderAll(); });
+    return { el: root, stop: stopAll, destroy() { disposed = true; stopAll(); if (kb) kb.destroy(); }, setMode(m) { st.mode = m; stopAll(); renderAll(); } };
   };
 })(window.MC = window.MC || {});

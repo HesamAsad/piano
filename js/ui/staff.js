@@ -15,8 +15,8 @@
     p: '\uE520', m: '\uE521', f: '\uE522', brace: '\uE000', staccAbove: '\uE4A2', staccBelow: '\uE4A3',
   };
   const HEAD_W = { w: 1.688, h: 1.18, q: 1.18, e: 1.18, s: 1.18 };
-  const ACC_GLYPH = { '-1': G.flat, 0: G.natural, 1: G.sharp };
-  const ACC_W = { '-1': 0.904, 0: 0.672, 1: 0.996 };
+  const ACC_GLYPH = { '-1': G.flat, 0: G.natural, 1: G.sharp, 2: '\uE263' };
+  const ACC_W = { '-1': 0.904, 0: 0.672, 1: 0.996, 2: 1 };
   const tsGlyphs = (n) => String(n).split('').map((c) => String.fromCharCode(0xe080 + +c)).join('');
   const dynGlyphs = (d) => d.split('').map((c) => G[c]).join('');
   const r3 = (x) => Math.round(x * 1000) / 1000;
@@ -43,7 +43,7 @@
             const k = n.letter + n.octave;
             const cur = k in accState ? accState[k] : T.keyAcc(score.key, n.letter);
             let acc = null;
-            if (n.acc !== cur || (score.forceAcc && n.acc !== 0)) { acc = n.acc; accState[k] = n.acc; }
+            if (n.acc !== cur || n.forceNatural || (score.forceAcc && n.acc !== 0)) { acc = n.acc; accState[k] = n.acc; }
             if (ev.tiedFrom || ev.tiedFromMidis?.includes(n.midi)) acc = null;
             return { n, pos, acc, dx: 0 };
           });
@@ -164,6 +164,7 @@
     if (o.showNames || o.labelRow) { rows.names = yb + 1.6; yb += 2.3 + (nameLines - 1) * 1.35; }
     if (dyn) { rows.dyn = Math.max(yb + 1.4, 3.2); yb = rows.dyn + 1.2; }
     if (o.showCounts && si === score.staves.length - 1) { rows.counts = yb + 1.7; yb += 2.4; }
+    if (st.pedal === 'bar' && !score.staves[si + 1]?.pedal) { rows.pedal = yb + 1.4; yb += 2.4; }
     below = yb;
     return { above, below, rows, fingersAbove };
   }
@@ -181,6 +182,14 @@
     const timeW = o.timeSig && score.time && !o.free ? 2.7 : 0;
     const braceW = score.staves.length > 1 ? 1.4 : 0;
     const count = score.staves[0].measures.length;
+    // An optional vocal staff sits above the piano's two-staff brace.
+    const groups = [];
+    score.staves.forEach((st, si) => {
+      const id = st.group || (st.hand === 'vocal' ? 'vocal' : 'piano');
+      const last = groups[groups.length - 1];
+      if (last && last.id === id) last.to = si;
+      else groups.push({ id, from: si, to: si });
+    });
     // measure geometry
     const mData = [];
     for (let mi = 0; mi < count; mi++) {
@@ -316,23 +325,26 @@
         // barline
         if (o.barlines) {
           const isFinal = md.mi === count - 1 && o.finalBar;
-          const top = yOf(0, 8), bot = yOf(score.staves.length - 1, 0);
-          const nextM = score.staves[0].measures[md.mi + 1];
-          if (st0.endRepeat) drawRepeatEnd(g, mEnd, score.staves.length, yOf, top, bot);
-          else if (nextM && nextM.startRepeat) { /* the start-repeat sign replaces this barline */ }
-          else if (isFinal) {
-            g.appendChild(rect((mEnd - 0.5) * SP - 0.5 * SP, top, 0.16 * SP, bot - top, 'st-bar'));
-            g.appendChild(rect((mEnd - 0.5) * SP, top, 0.5 * SP, bot - top, 'st-bar'));
-          } else if ((score.doubleBars || []).includes(md.mi + 1)) {
-            g.appendChild(rect((mEnd - 0.5) * SP, top, 0.16 * SP, bot - top, 'st-bar st-double-bar'));
-            g.appendChild(rect((mEnd - 0.1) * SP, top, 0.16 * SP, bot - top, 'st-bar'));
-          } else g.appendChild(rect(mEnd * SP - 0.08 * SP, top, 0.16 * SP, bot - top, 'st-bar'));
+          groups.forEach(({ from, to }) => {
+            const top = yOf(from, 8), bot = yOf(to, 0);
+            const nextM = score.staves[0].measures[md.mi + 1];
+            if (st0.endRepeat) drawRepeatEnd(g, mEnd, from, to, yOf, top, bot);
+            else if (nextM && nextM.startRepeat) { /* the start-repeat sign replaces this barline */ }
+            else if (isFinal) {
+              g.appendChild(rect((mEnd - 0.5) * SP - 0.5 * SP, top, 0.16 * SP, bot - top, 'st-bar'));
+              g.appendChild(rect((mEnd - 0.5) * SP, top, 0.5 * SP, bot - top, 'st-bar'));
+            } else if ((score.doubleBars || []).includes(md.mi + 1)) {
+              g.appendChild(rect((mEnd - 0.5) * SP, top, 0.16 * SP, bot - top, 'st-bar st-double-bar'));
+              g.appendChild(rect((mEnd - 0.1) * SP, top, 0.16 * SP, bot - top, 'st-bar'));
+            } else g.appendChild(rect(mEnd * SP - 0.08 * SP, top, 0.16 * SP, bot - top, 'st-bar'));
+          });
         }
         const numberY = (tops[0] - ext[0].above + 1.2) * SP;
         if (o.measureNumbers && md === sys[0] && md.mi > 0 && !o.measureNumbersAll) g.appendChild(text(String(md.mi + 1), (mStart + 0.2) * SP, numberY, 'st-mnum', 'start'));
         if (o.measureNumbersAll) g.appendChild(text(String(md.mi + 1), (mStart + 0.5) * SP, numberY, 'st-mnum', 'start'));
         const tempo = md.mi === 0 ? score.tempo : (score.tempoChanges || []).find((c) => c.measure === md.mi + 1)?.bpm;
         if (o.showTempo && tempo) g.appendChild(text(`♩ = ${tempo}`, (mStart + 0.5) * SP, numberY + 1.8 * SP, 'st-tempo', 'start'));
+        if (score.daCapo && md.mi === count - 1) g.appendChild(text('D.C.', (mEnd - 0.3) * SP, numberY, 'st-tempo st-da-capo', 'end'));
         if ((score.caesuras || []).includes(md.mi + 1)) {
           const cy = yOf(0, 8), cx = (mEnd - 1.5) * SP;
           g.appendChild(S('path', { d: `M ${cx} ${cy + 4} l 5 -14 M ${cx + 7} ${cy + 4} l 5 -14`, class: 'st-caesura', fill: 'none', stroke: 'currentColor', 'stroke-width': 1.6 }));
@@ -348,22 +360,36 @@
       });
       g.insertBefore(lines, g.firstChild);
       // system start barline & brace
-      if (score.staves.length > 1) {
-        const top = yOf(0, 8), bot = yOf(score.staves.length - 1, 0);
+      groups.filter(({ from, to }) => to > from).forEach(({ from, to }) => {
+        const top = yOf(from, 8), bot = yOf(to, 0);
         g.appendChild(rect(sysStartX * SP - 0.08 * SP, top, 0.16 * SP, bot - top, 'st-bar'));
         const k = (bot - top) / SP / 4;
         const bx = (sysStartX - 0.3 - 0.277 * k) * SP;
         g.appendChild(glyph(G.brace, bx, bot, 'brace', { transform: `translate(${r3(bx)} ${r3(bot)}) scale(${r3(k)}) translate(${r3(-bx)} ${r3(-bot)})` }));
-      }
+      });
       if (o.handLabels && score.staves.length > 1) {
-        score.staves.forEach((st, si) => g.appendChild(text(st.hand === 'lh' ? 'L.H.' : 'R.H.', (sysStartX + 0.2) * SP, yOf(si, 8) - 1.2 * SP, 'st-hand', 'start')));
+        score.staves.forEach((st, si) => g.appendChild(text(st.label || (st.hand === 'lh' ? 'L.H.' : 'R.H.'), (sysStartX + 0.2) * SP, yOf(si, 8) - 1.2 * SP, 'st-hand', 'start')));
       }
       // rows: names, fingers, counts, dynamics
       measureXs.forEach((mx) => {
+        score.staves.forEach((st, si) => {
+          if (!ext[si].rows.pedal) return;
+          const py = (tops[si] + 4 + ext[si].rows.pedal) * SP;
+          const px = (mx.x0 + 0.7) * SP, end = (mx.x1 - 0.5) * SP;
+          g.appendChild(S('path', { d: `M ${px} ${py - 6} V ${py} H ${end} V ${py - 6}`, class: 'st-pedal', fill: 'none', stroke: 'currentColor', 'stroke-width': 0.9 }));
+          if (mx.mi === 0) g.appendChild(text('Ped.', px, py - 9, 'st-hand', 'start'));
+        });
         mx.cols.forEach((c) => c.evs.forEach(({ si, ev }) => {
-          if (ev.hidden || !ev._heads) return;
+          if (ev.hidden) return;
           const info = evInfo.get(ev._ref);
           const st = score.staves[si];
+          if (!ev._heads) {
+            if (ev.dyn) {
+              const dx = ev.measureRest ? mx.x0 + 0.7 : info.x - 0.3;
+              info.g.appendChild(glyph(dynGlyphs(ev.dyn), dx * SP, (tops[si] + 4 + ext[si].rows.dyn) * SP, 'dyn'));
+            }
+            return;
+          }
           const hw = HEAD_W[ev.base];
           const cxm = (info.x + hw / 2) * SP;
           if (o.showNames && !ev.tiedFrom) {
@@ -484,7 +510,13 @@
             const behavior = MC.util.reducedMotion() ? 'auto' : 'smooth';
             if (target && target.classList.contains('score-viewport')) {
               const box = target.getBoundingClientRect();
-              if (r.top < box.top + 24 || r.bottom > box.bottom - 24) target.scrollTo({ top: target.scrollTop + r.top - box.top - target.clientHeight / 2, behavior });
+              const moveY = r.top < box.top + 24 || r.bottom > box.bottom - 24;
+              const moveX = r.left < box.left + 16 || r.right > box.right - 16;
+              if (moveY || moveX) target.scrollTo({
+                top: moveY ? target.scrollTop + r.top - box.top - target.clientHeight / 2 : target.scrollTop,
+                left: moveX ? target.scrollLeft + r.left - box.left - target.clientWidth / 2 : target.scrollLeft,
+                behavior,
+              });
             } else if (r.top < 60 || r.bottom > window.innerHeight - 60) tgt.scrollIntoView({ block: 'center', behavior });
           }
         } else if (!refs.length) cursor.style.display = 'none';
@@ -597,8 +629,14 @@
       const ax = (x - 0.8 - (accHeads.length ? 1.3 : 0)) * SP;
       const ay = yOf(si, hi) - 0.6 * SP, end = yOf(si, lo) + 0.6 * SP;
       let path = `M ${ax} ${ay}`;
-      for (let yy = ay; yy < end; yy += 7) path += ` q -4 1.75 0 3.5 q 4 1.75 0 3.5`;
+      const waves = Math.ceil((end - ay) / 7);
+      for (let i = 0; i < waves; i++) path += ` q -4 1.75 0 3.5 q 4 1.75 0 3.5`;
       g.appendChild(S('path', { d: path, class: 'st-arpeggio', fill: 'none', stroke: 'currentColor', 'stroke-width': 1.3 }));
+      if (typeof ev.arpeggio === 'string') {
+        const down = ev.arpeggio === 'down', tip = down ? ay + waves * 7 : ay;
+        const tail = tip + (down ? -5 : 5);
+        g.appendChild(S('path', { d: `M ${ax - 3} ${tail} L ${ax} ${tip} L ${ax + 3} ${tail}`, class: 'st-arpeggio-arrow', fill: 'none', stroke: 'currentColor', 'stroke-width': 1.5 }));
+      }
     }
     if (ev.fermata) {
       const fx = (x + hw / 2) * SP, fy = Math.min(yOf(si, 8) - SP, topY - SP);
@@ -661,11 +699,11 @@
     // drawn later relative to staff; store as marker
     g.appendChild(S('g', { class: 'rep-start', 'data-x': x, 'data-si': si }));
   }
-  function drawRepeatEnd(g, xEnd, nStaves, yOf, top, bot) {
+  function drawRepeatEnd(g, xEnd, from, to, yOf, top, bot) {
     const xThick = (xEnd - 0.5) * SP;
     g.appendChild(rect(xThick, top, 0.5 * SP, bot - top, 'st-bar'));
     g.appendChild(rect(xThick - 0.56 * SP, top, 0.16 * SP, bot - top, 'st-bar'));
-    for (let si = 0; si < nStaves; si++) {
+    for (let si = from; si <= to; si++) {
       [3, 5].forEach((p) => g.appendChild(S('circle', { cx: r3(xThick - 1.05 * SP), cy: r3(yOf(si, p)), r: 0.25 * SP, class: 'st-fill' })));
     }
   }

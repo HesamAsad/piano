@@ -122,7 +122,7 @@
 
   /* ---------- Top bar ---------- */
   const NAV = [['today', 'Home'], ['course', 'Course'], ['practice', 'Practice'], ['review', 'Review'], ['pieces', 'Pieces'], ['tools', 'Tools']];
-  const MORE = [['progress', 'Progress'], ['start', 'Getting started'], ['settings', 'Settings'], ['resources', 'Resources & credits']];
+  const MORE = [['guide', 'Tips & study guide'], ['progress', 'Progress'], ['start', 'Getting started'], ['settings', 'Settings'], ['resources', 'Resources & credits']];
   function topbar() {
     const moreMenu = h('div.more-menu#more-menu', { role: 'menu' }, MORE.map(([k, t]) => h('a', { href: '#/' + k, 'data-k': k, role: 'menuitem' }, t)));
     const moreBtn = h('button.more-btn', { type: 'button', 'aria-haspopup': 'true', 'aria-expanded': 'false', 'aria-controls': 'more-menu' }, 'More', h('span.caret', { 'aria-hidden': 'true' }));
@@ -177,7 +177,7 @@
     const m = main();
     U.clear(m);
     m.className = 'page-' + (page || 'none');
-    const pages = { today: pageToday, start: pageStart, course: pageCourse, lesson: () => pageLesson(a, +b || 0), practice: () => pagePractice(a), review: pageReview, pieces: () => pagePieces(a), tools: pageTools, progress: pageProgress, settings: pageSettings, resources: pageResources };
+    const pages = { today: pageToday, start: pageStart, course: pageCourse, guide: () => pageGuide(a), lesson: () => pageLesson(a, +b || 0), practice: () => pagePractice(a), review: pageReview, pieces: () => pagePieces(a), tools: pageTools, progress: pageProgress, settings: pageSettings, resources: pageResources };
     const fn = pages[page];
     if (!fn) {
       location.replace(S.isNew() && !S.setting('onboarded') ? '#/start' : '#/today');
@@ -315,11 +315,12 @@
     const piece = suggestPiece();
     const planCard = (ico, title, d, action) => h('li.plan-card', null, h('span.plan-ico', null, icon(ico)), h('div.plan-body', null, h('strong', null, title), h('span.small.muted', null, d)), action);
     const plan = h('ol.today-plan', null,
-      planCard('review', 'Review', due.length ? `${due.length} item${due.length > 1 ? 's' : ''} due — mistakes first. About 3 minutes.` : S.nextDue() ? `Nothing due right now. Next item ${U.relTime(S.nextDue())}.` : 'Nothing yet — review items appear after you answer questions.', due.length ? h('a.btn.btn-primary', { href: '#/review' }, 'Start review') : h('a.btn', { href: '#/practice' }, 'Free practice')),
-      planCard('bulb', 'One new idea', nx ? `${nx.lesson.title} (~${nx.lesson.minutes} min)` : 'All lessons complete', nx ? h('a.btn', { href: `#/lesson/${nx.lesson.id}/${nx.step}` }, 'Open lesson') : h('span')),
-      planCard('note', 'Some music', piece ? `${piece.title} — play it slowly, with guidance or on your own.` : 'Unlocks after Module 5 (reading pitch). Meanwhile: free play.', piece ? h('a.btn', { href: '#/pieces/' + piece.id }, 'Play') : h('a.btn', { href: '#/tools' }, 'Free play')),
-      planCard('piano', 'Optional: real instrument', 'Practised on a real piano or keyboard? Log it as self-reported practice.', btn('Log practice', () => logPracticeModal(nx ? nx.lesson.id : null))));
-    m.append(h('div.section-head.tight', null, h('h2', null, 'Your plan for today')), plan);
+      planCard('review', '2 min · Warm up', due.length ? `${due.length} items due. Review a few, starting with mistakes.` : 'Choose one familiar drill. Keep it short and comfortable.', due.length ? h('a.btn.btn-primary', { href: '#/review' }, 'Start review') : h('a.btn', { href: '#/practice/keys' }, 'Keyboard drill')),
+      planCard('bulb', '8 min · One new idea', nx ? `${nx.lesson.title}. Work through a few steps; your place is saved.` : 'Revisit a memory clue and try its short exercise.', nx ? h('a.btn', { href: `#/lesson/${nx.lesson.id}/${nx.step}` }, 'Open lesson') : h('a.btn', { href: '#/guide' }, 'Browse tips')),
+      planCard('note', '5 min · Make music', piece ? `${piece.title} — listen, then practise a small section slowly.` : 'Explore the keyboard. Make a short pattern and repeat it slowly.', piece ? h('a.btn', { href: '#/pieces/' + piece.id }, 'Play') : h('a.btn', { href: '#/tools' }, 'Free play')));
+    m.append(h('div.section-head.tight', null, h('h2', null, 'A 15-minute routine'), h('a.link-arrow', { href: '#/guide' }, 'Tips & study guide →')),
+      h('p.small.muted', null, 'A little, often. Use these as time guides; a whole lesson can take more than one session.'), plan,
+      h('div.row.practice-log-row', null, h('span.small.muted', null, 'Practised on a real instrument?'), btn('Log practice', () => logPracticeModal(nx ? nx.lesson.id : null), 'btn-small')));
     const sk = h('div.panel', { style: { marginTop: '28px' } }, h('div.row-between', null, h('h2', { style: { margin: 0 } }, 'Skills at a glance'), h('a.link-arrow', { href: '#/progress' }, 'Full progress →')));
     Object.entries(S.SKILLS).forEach(([k, def]) => sk.appendChild(skillRow(k, def, summ[k])));
     sk.appendChild(h('p.small.muted', { style: { marginTop: '10px', marginBottom: 0 } }, 'No streaks and no leaderboards. Bars grow only when you answer correctly on separate days.'));
@@ -352,6 +353,9 @@
       h('p', null, 'From your first sound to reading and playing short pieces. Each module lists what it builds on — you can open any lesson, but later lessons assume the earlier ones.'),
       h('div.overall', null, meter(doneN / all.length, `${doneN} of ${all.length} lessons completed`), h('span.small.muted', null, `${doneN} of ${all.length} lessons completed`), h('a.link-arrow.small', { href: '#/start' }, 'Prerequisites & setup →'))));
     if (nx) m.append(h('section.continue-card.compact', null, h('div.cc-body', null, h('div.eyebrow', null, 'Continue learning'), h('h2', null, nx.lesson.title), h('div.cc-meta', null, h('span', null, `Module ${nx.lesson.module}`), h('span.with-ico', null, icon('clock', 'ico-sm'), `${nx.lesson.minutes} min`))), h('a.btn.btn-primary', { href: `#/lesson/${nx.lesson.id}/${nx.step}` }, 'Continue →')));
+    m.append(h('div.study-invitation', null,
+      h('div', null, h('h2', null, 'A small idea that stays with you'), h('p', null, 'Memory clues, things to try, and quick recall questions — organized into seven topics.')),
+      h('a.btn', { href: '#/guide' }, 'Open the study guide →')));
     m.append(h('div.legend.course-legend', null,
       h('span', null, h('span.st-icon.todo'), ' Not started'), h('span', null, h('span.st-icon.half'), ' In progress'), h('span', null, h('span.st-icon.done', null, '✓'), ' Completed'), h('span', null, h('span.st-icon.star', null, '★'), ' Demonstrated (≥80% on the check)')));
     STAGES.forEach((st) => {
@@ -379,6 +383,16 @@
           list));
       });
     });
+  }
+
+  function pageGuide(topic) {
+    main().append(h('div.page-head.study-head', null,
+      h('div.eyebrow', null, 'Your piano companion'), h('h1', null, 'Small clues. Lasting habits.'),
+      h('p.lede', null, 'Find a memory trick, try it at the keyboard, then check what stuck. Come back whenever a note, a rhythm or a symbol needs a little explanation.'),
+      h('div.row', null, h('a.btn', { href: '#/course' }, 'Course map'), h('a.link-arrow', { href: '#/today' }, 'Your 15-minute routine →'))),
+      h('ol.study-method', { 'aria-label': 'How to use these tips' },
+        ['Remember the clue', 'Try it at the keys', 'Recall, then reveal'].map((t, i) => h('li', null, h('span', null, String(i + 1)), t))),
+      W.studyGuide(topic));
   }
 
   /* ---------- Lesson ---------- */
@@ -420,11 +434,13 @@
     explain.append(h('div.eyebrow', null, `Step ${stepIdx + 1} of ${l.steps.length}`), h('h2', null, stepName(step)));
     if (step.kind === 'intro') explain.append(h('p.goal', { html: `<strong>Goal:</strong> ${l.goal}` }), h('div.callout', { html: `<p><strong>Example:</strong> ${l.example}</p>` }));
     if (step.body) explain.append(h('div.prose', { html: step.body }));
+    if (step.kind === 'see') explain.append(W.lessonCoach(id, 'see'));
     if (step.defs) explain.append(h('dl.def', null, step.defs.flatMap(([t, d]) => [h('dt', null, t), h('dd', { html: d })])));
     if (step.more) explain.append(U.details('More detail (optional)', h('div', { html: step.more })));
     if (step.kind === 'intro') explain.append(beforeCard(l, mod));
     if (step.kind === 'recap') renderRecap(l, step, explain, area, list[li + 1]);
     else renderStepArea(l, step, area, goNext);
+    if (step.kind === 'explore') area.append(W.lessonCoach(id, 'explore'));
     // Step navigation: sticky at the bottom so "Next" is always in reach.
     const next = stepIdx + 1 < l.steps.length ? btn(h('span', null, h('span.hide-mobile', null, 'Next: '), `${stepName(l.steps[stepIdx + 1])} →`), goNext, 'btn-primary') : (list[li + 1] ? h('a.btn.btn-primary', { href: `#/lesson/${list[li + 1].id}/0` }, h('span.hide-mobile', null, 'Next lesson: '), `${list[li + 1].title} →`) : h('a.btn.btn-primary', { href: '#/today' }, 'Finish →'));
     m.append(h('div.step-nav', null,
@@ -683,15 +699,16 @@
   /* ---------- Resources ---------- */
   function pageResources() {
     const m = main();
-    m.append(h('div.page-head', null, h('h1', null, 'Resources & credits'), h('p', null, 'Sources consulted while designing this course, free places to continue, and attributions. All explanations and exercises here are original.')));
+    m.append(h('div.page-head', null, h('h1', null, 'Resources & credits'), h('p', null, 'Sources consulted while designing this course, free places to continue, and attributions.')));
     const list = (items) => h('ul.resources', null, items.map((r) => h('li', null, h('a', { href: r.url, target: '_blank', rel: 'noopener' }, r.title), h('span.why', null, r.why), r.and ? h('span.why', null, r.and) : null)));
     m.append(h('div.panel', null, h('h2', null, 'Sources consulted'), list(MC.resources)));
     m.append(h('div.panel', null, h('h2', null, 'Free resources for what comes next'), list(MC.freeResources)));
     m.append(h('div.panel', null, h('h2', null, 'Credits and licences'), h('ul', null,
+      h('li', null, 'Teaching tips and study structure: adapted from the supplied Middle C Piano Course tutorial. Memory clues, short try-it prompts, seven study topics and the 2–8–5 minute routine are integrated with this course’s lessons and exercises.'),
       h('li', { html: '<strong>Piano sound:</strong> Salamander Grand Piano V3 by Alexander Holm, <a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noopener">CC BY 3.0</a>, via the MP3 package by Jan Forst (MIT). Changed for this app: 21 notes (C2–C7), mono, trimmed, re-encoded; other notes are pitch-shifted. See <code>licenses/</code>.' }),
       h('li', { html: '<strong>Notation font:</strong> Bravura © Steinberg Media Technologies GmbH, SIL Open Font License 1.1 (subset embedded).' }),
       h('li', { html: '<strong>Text fonts:</strong> Inter (© The Inter Project Authors) and Fraunces (© The Fraunces Project Authors), both SIL Open Font License 1.1, Latin subsets bundled. See <code>licenses/</code>.' }),
-      h('li', { html: '<strong>Melodies:</strong> traditional and public-domain tunes (Hot Cross Buns, Mary Had a Little Lamb, Au clair de la lune, Lightly Row/Hänschen klein, Beethoven’s Ode to Joy theme), some simplified, plus original exercises. The Night King excerpt (measures 1–58) is by Ramin Djawadi, arranged by Liam Hinzman. Interstellar Theme — Easy Piano is by Hans Zimmer, arranged by Matteo248. Both are transcribed from supplied scores.' }))));
+      h('li', { html: '<strong>Melodies:</strong> traditional and public-domain tunes (Hot Cross Buns, Mary Had a Little Lamb, Au clair de la lune, Lightly Row/Hänschen klein, Beethoven’s Ode to Joy theme), some simplified, plus original exercises. The Night King excerpt (measures 1–58) is by Ramin Djawadi, arranged by Liam Hinzman. Interstellar Theme — Easy Piano is by Hans Zimmer, arranged by Matteo248. Begonvil – Benim Yerime de Sev (all 46 written measures), credited to Sezen Aksu in the supplied score, includes the vocal melody and piano accompaniment. These repertoire pieces are transcribed from supplied scores.' }))));
     m.append(h('div.panel', null, h('h2', null, 'Honest limitations'), h('ul', null,
       h('li', null, 'The app checks which keys you press and when. It cannot see posture or hand technique, and cannot hear an acoustic piano (no microphone input). Real-piano practice is self-reported.'),
       h('li', null, 'On-screen and computer keys cannot sense how hard you press; loudness comes from a slider. A MIDI keyboard sends real key speed.'),

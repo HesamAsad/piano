@@ -102,6 +102,7 @@
     C: { acc: {}, sig: [], type: 'none', name: 'C major' },
     G: { acc: { F: 1 }, sig: ['F'], type: 'sharp', name: 'G major' },
     D: { acc: { F: 1, C: 1 }, sig: ['F', 'C'], type: 'sharp', name: 'D major' },
+    'G#m': { acc: { F: 1, C: 1, G: 1, D: 1, A: 1 }, sig: ['F', 'C', 'G', 'D', 'A'], type: 'sharp', name: 'G♯ minor' },
     F: { acc: { B: -1 }, sig: ['B'], type: 'flat', name: 'F major' },
     Bb: { acc: { B: -1, E: -1 }, sig: ['B', 'E'], type: 'flat', name: 'B♭ major' },
   };
@@ -279,9 +280,9 @@
       (s.annotations || []).forEach((a) => {
         const ev = r.measures[a.measure - 1]?.events[a.event || 0];
         if (!ev) errors.push(`Staff ${si + 1}: annotation outside score`);
-        else { ev.fermata = !!a.fermata; ev.arpeggio = !!a.arpeggio; }
+        else { ev.fermata = !!a.fermata; ev.arpeggio = a.arpeggio || false; }
       });
-      return { clef: s.clef, hand: s.hand || (s.clef === 'bass' ? 'lh' : 'rh'), measures: r.measures };
+      return { clef: s.clef, hand: s.hand || (s.clef === 'bass' ? 'lh' : 'rh'), group: s.group, label: s.label, pedal: s.pedal, initialDynamic: s.initialDynamic, measures: r.measures };
     });
     const count = Math.max(...staves.map((s) => s.measures.length));
     staves.forEach((s, si) => {
@@ -309,7 +310,7 @@
     tempoChanges.forEach((c) => {
       if (!Number.isInteger(c.measure) || c.measure < 1 || c.measure > count || !(c.bpm > 0)) errors.push('Invalid tempo change');
     });
-    return { key: piece.key || 'C', time, bpm, staves, count, errors, tempo: piece.tempo || 80, tempoChanges, doubleBars: piece.doubleBars || [], caesuras: piece.caesuras || [] };
+    return { key: piece.key || 'C', time, bpm, staves, count, errors, tempo: piece.tempo || 80, tempoChanges, doubleBars: piece.doubleBars || [], caesuras: piece.caesuras || [], daCapo: !!piece.daCapo };
   };
 
   /* Measure order after expanding simple repeats. */
@@ -326,6 +327,8 @@
       if (ms[i].endRepeat && !done.has(i)) { done.add(i); i = start; continue; }
       i++;
     }
+    // D.C. returns to the beginning once, without taking internal repeats again.
+    if (score.daCapo) order.push(...ms.map((_, mi) => mi));
     return order;
   };
 
@@ -338,7 +341,7 @@
     score.staves.forEach((st, si) => {
       const active = !hands || hands.includes(st.hand);
       // dynamics state per staff over the linear (unexpanded) score
-      let vel = T.VELOCITY.mf;
+      let vel = T.VELOCITY[st.initialDynamic] || T.VELOCITY.mf;
       const velAt = new Map();
       let hp = null;
       const flat = [];
@@ -368,6 +371,7 @@
           if (e.kind !== 'rest' && active) {
             // Extend each pitch separately: one chord tone may sustain while another repeats.
             const noteDurations = {};
+            const soundDurations = {};
             e.notes.forEach((n) => {
               let d = e.dur, k = ei, mm = mi, cur = e;
               while (cur && cur.tie && (cur.tieMidis || cur.notes.map((x) => x.midi)).includes(n.midi)) {
@@ -377,17 +381,23 @@
                 d += nx.dur; k++; cur = nx;
               }
               noteDurations[n.midi] = d;
+              // A tied key can stay down while the pedal is renewed in the next bar.
+              soundDurations[n.midi] = st.pedal === 'bar' ? d + Math.max(0, score.bpm - cur.start - cur.dur) : d;
             });
             const tiedMidis = e.tiedFromMidis || (e.tiedFrom ? e.notes.map((n) => n.midi) : []);
+            // Pedal affects the sound, while key highlights retain the written lengths.
             items.push({
               t: offset + e.start,
               d: Math.max(...Object.values(noteDurations)),
               noteDurations,
+              soundDurations,
+              pedaled: st.pedal === 'bar',
               midis: e.notes.map((n) => n.midi).filter((midi) => !tiedMidis.includes(midi)),
               tiedMidis,
               tiedFrom: !!e.tiedFrom,
               stacc: !!e.stacc,
               spread: e.arpeggio ? 0.055 : 0,
+              rollDown: e.arpeggio === 'down',
               vel: velAt.get(e) || T.VELOCITY.mf,
               staff: si,
               hand: st.hand,
@@ -421,6 +431,7 @@
       const resume = (it.tiedFrom || it.tiedMidis?.length) && Math.abs(it.t - from) < 1e-6;
       return Object.assign({}, it, { t: it.t - from, d: Math.min(it.d, to - it.t),
         noteDurations: Object.fromEntries(Object.entries(it.noteDurations || {}).map(([midi, d]) => [midi, Math.min(d, to - it.t)])),
+        soundDurations: Object.fromEntries(Object.entries(it.soundDurations || {}).map(([midi, d]) => [midi, Math.min(d, to - it.t)])),
         tiedFrom: resume ? false : it.tiedFrom, midis: resume ? it.notes.map((n) => n.midi) : it.midis });
     });
     const map = tl.tempoMap || [{ t: 0, ratio: 1 }];
@@ -451,7 +462,7 @@
     for (const it of timeline.items) {
       if (it.tiedFrom || !it.midis.length) continue;
       const last = out[out.length - 1];
-      if (last && Math.abs(last.t - it.t) < 1e-6) { last.items.push(it); last.midis.push(...it.midis); }
+      if (last && Math.abs(last.t - it.t) < 1e-6) { last.items.push(it); last.midis = [...new Set([...last.midis, ...it.midis])]; }
       else out.push({ t: it.t, items: [it], midis: [...it.midis] });
     }
     return out;

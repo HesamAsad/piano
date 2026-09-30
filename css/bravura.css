@@ -13,3 +13,13 @@
   font-display: block;
   unicode-range: U+E242-E243, U+E4E7;
 }
+
+/* Double sharp for chromatic repertoire; same licensed Bravura source. */
+@font-face {
+  font-family: 'BravuraMC';
+  src: url('../fonts/bravura-double-sharp.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: block;
+  unicode-range: U+E263;
+}
