@@ -93,7 +93,9 @@
         if (it.tiedFrom || !it.midis.length) return;
         const known = (it.fingers || []).map((f, k) => ({ f, note: it.notes[k] })).filter((x) => x.f && x.note);
         const map = cur[it.hand];
-        if (known.length && !(map && known.every((x) => map[x.f] === x.note.midi))) cur[it.hand] = handMap(it.hand, known);
+        const placement = (piece.handPositions || []).find((p) => it.mi + 1 >= p.from && it.mi + 1 <= p.to && p[it.hand]);
+        if (placement) cur[it.hand] = Object.fromEntries(placement[it.hand].map((note, i) => [i + 1, T.midi(note)]));
+        else if (known.length && !(map && known.every((x) => map[x.f] === x.note.midi))) cur[it.hand] = handMap(it.hand, known);
         if (cur[it.hand] && !fingerPlan.has(it.ref)) fingerPlan.set(it.ref, { hand: it.hand, map: cur[it.hand] });
       });
     })();
@@ -484,6 +486,17 @@
     MC.util.onCleanup(stopAll);
     // Render once attached (so widths are known)
     requestAnimationFrame(() => { if (!disposed) renderAll(); });
-    return { el: root, stop: stopAll, destroy() { disposed = true; stopAll(); if (kb) kb.destroy(); }, setMode(m) { st.mode = m; stopAll(); renderAll(); } };
+    return {
+      el: root, stop: stopAll,
+      destroy() { disposed = true; stopAll(); if (kb) kb.destroy(); },
+      setMode(m) { st.mode = m; stopAll(); renderAll(); },
+      setRange(from, to) {
+        st.from = Math.max(0, Math.min(score.count - 1, from - 1));
+        st.to = Math.max(st.from, Math.min(score.count - 1, to - 1));
+        stopAll(); renderAll();
+        const first = staff.evInfo.get(`0:${st.from}:0`);
+        if (first) staffHost.scrollTop = first.g.getBoundingClientRect().top - staffHost.getBoundingClientRect().top + staffHost.scrollTop - 70;
+      },
+    };
   };
 })(window.MC = window.MC || {});

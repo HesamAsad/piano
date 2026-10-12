@@ -113,6 +113,55 @@ const invalidPartialTie = T.buildScore({ time: [3, 4], staves: [{ clef: 'treble'
 ok(invalidPartialTie.errors.some((e) => e.includes('tie without')), 'reject a partial tie to a pitch absent from the chord');
 ok(T.parseVoice('C4s D4s E4s F4s G4h', 3).errors.length === 0 && T.parseVoice('rs C4e. D4h', 3).errors.length === 0, 'sixteenth notes and rests fill a 3/4 bar correctly');
 
+// ---- First Step: compare every pitch, duration and repeat against the supplied ABC.
+const firstStep = MC.pieces['interstellar-first-step'];
+const firstScore = T.buildScore(firstStep);
+const abcSource = fs.readFileSync(path.join(root, 'scores/interstellar-first-step.abc'), 'utf8');
+function readSuppliedABC(voice) {
+  const source = abcSource.split('\n').filter((l) => l.startsWith(`[V:${voice}]`)).map((l) => l.replace(/^\[V:\w+\]/, '')).join(' ');
+  // This intentionally small reference reader covers the literal notation in the supplied file.
+  const token = /\|:|:\||\||\[[A-Ga-g0-9,']+\]|[A-Ga-gz][,']*\d*/g;
+  ok(source.replace(token, '').trim() === '', `ABC ${voice}: every symbol is understood`);
+  const bars = []; let bar = { events: [], startRepeat: false, endRepeat: false };
+  const close = () => { if (bar.events.length) bars.push(bar); bar = { events: [], startRepeat: false, endRepeat: false }; };
+  const note = (str) => {
+    const [, letter, octaveMarks, length] = /^([A-Ga-gz])([,']*)(\d*)$/.exec(str);
+    const octave = (letter === letter.toUpperCase() ? 4 : 5) + [...octaveMarks].reduce((a, c) => a + (c === ',' ? -1 : 1), 0);
+    return { midi: letter === 'z' ? null : 12 * (octave + 1) + { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }[letter.toUpperCase()], dur: (length ? +length : 1) / 2 };
+  };
+  for (const item of source.match(token)) {
+    if (item === '|') { close(); continue; }
+    if (item === '|:') { close(); bar.startRepeat = true; continue; }
+    if (item === ':|') { bar.endRepeat = true; close(); continue; }
+    const notes = item.startsWith('[') ? item.slice(1, -1).match(/[A-Ga-g][,']*\d*/g).map(note) : [note(item)];
+    ok(notes.every((n) => n.dur === notes[0].dur), `ABC ${voice}: chord tones have equal lengths`);
+    bar.events.push({ midis: notes.map((n) => n.midi).filter((n) => n != null).sort((a, b) => a - b), dur: notes[0].dur });
+  }
+  close(); return bars;
+}
+['RH', 'LH'].forEach((name, si) => {
+  const bars = readSuppliedABC(name), staff = firstScore.staves[si];
+  ok(bars.length === 30 && staff.measures.length === bars.length, `${name}: all 30 supplied measures present`);
+  bars.forEach((bar, mi) => {
+    const actual = staff.measures[mi];
+    ok(actual.events.length === bar.events.length, `${name} ${mi + 1}: all note/rest events present`);
+    ok(actual.startRepeat === bar.startRepeat && actual.endRepeat === bar.endRepeat, `${name} ${mi + 1}: repeat signs match ABC`);
+    bar.events.forEach((ev, ei) => {
+      const got = actual.events[ei];
+      ok(got.notes.map((n) => n.midi).join() === ev.midis.join() && near(got.dur, ev.dur), `${name} ${mi + 1}:${ei}: pitch, octave and duration match ABC`);
+      if (got.notes.length) {
+        ok(got.fingers?.length === got.notes.length && new Set(got.fingers).size === got.fingers.length, `${name} ${mi + 1}:${ei}: every chord tone has a distinct finger`);
+        const placement = firstStep.handPositions.find((p) => mi + 1 >= p.from && mi + 1 <= p.to)[staff.hand];
+        ok(got.notes.every((n, i) => T.midi(placement[got.fingers[i] - 1]) === n.midi), `${name} ${mi + 1}:${ei}: diagram agrees with printed fingering`);
+      }
+    });
+  });
+});
+const firstTimeline = T.timeline(firstScore);
+ok(T.measureOrder(firstScore).join() === [...Array(18).keys(), ...Array.from({ length: 20 }, (_, i) => i + 10), 26, 27, 28, 29].join(), 'First Step: bars 11–18 and 27–30 repeat');
+ok(firstTimeline.total === 126 && near(T.tempoClock(96).seconds(firstTimeline.total), 78.75), 'First Step: 42 performed bars at 96 BPM');
+ok(T.sliceTimeline(T.timeline(firstScore, { noRepeats: true }), 30, 54).total === 24, 'selected ostinato has eight bars, with no internal repeat');
+
 // ---- Begonvil: separate vocal part, chromatic spelling, pedal, and directed rolls.
 const begonvil = T.buildScore(MC.pieces.begonvil);
 const btl = T.timeline(begonvil);

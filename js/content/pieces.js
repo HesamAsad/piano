@@ -255,6 +255,53 @@
       ].join(' | ') },
     ],
   });
+  add('interstellar-first-step', {
+    title: 'Interstellar — Main Theme (beginner study)', short: 'Interstellar — Main Theme',
+    composer: 'Hans Zimmer', arranger: 'Piano Beginner (credit in supplied ABC)', level: 5,
+    keyLabel: 'A minor', time: [3, 4], tempo: 96, extendedRange: true,
+    practiceGuide: 'interstellar-first-step',
+    handPositions: [
+      { from: 1, to: 10, rh: ['A4', 'B4', 'C5', 'D5', 'E5'], lh: ['E4', 'D4', 'C4', 'B3', 'A3'] },
+      { from: 11, to: 26, rh: ['A4', 'B4', 'C5', 'D5', 'E5'], lh: ['E4', 'D4', 'C4', 'B3', 'A3'] },
+      { from: 27, to: 29, rh: ['A4', 'B4', 'C5', 'D5', 'E5'], lh: ['C3', 'A2', 'G2', 'F2', 'E2'] },
+      { from: 30, to: 30, rh: ['G4', 'A4', 'B4', 'C5', 'D5'], lh: ['C3', 'A2', 'G2', 'F2', 'E2'] },
+    ],
+    note: '30 written measures from your corrected ABC, with measures 11–18 and 27–30 each repeated once. Suggested fingerings have been added for this study; they are not fingerings verified from the video. Open the practice guide below for hand placement, counting and quiet-hand drills.',
+    sections: [
+      { label: 'Intro pulse & motif', from: 1, to: 10 },
+      { label: 'Alternating ostinato', from: 11, to: 18 },
+      { label: 'Melody over held bass', from: 19, to: 26 },
+      { label: 'Closing dyads', from: 27, to: 30 },
+    ],
+    staves: [
+      { clef: 'treble', hand: 'rh', voice: [
+        'rm', 'rm', 'rm', 'rm', 'A4h./1', 'B4h./2',
+        'A4q/1 B4q/2 C5q/3', 'A4q/1 B4q/2 C5q/3', 'B4h./2', 'A4h./1',
+        '|: E5e/5 B4e/2 E5e/5 B4e/2 E5e/5 B4e/2',
+        'E5e/5 B4e/2 E5e/5 B4e/2 E5e/5 B4e/2',
+        'E5e/5 C5e/3 E5e/5 C5e/3 E5e/5 C5e/3',
+        'E5e/5 C5e/3 E5e/5 C5e/3 E5e/5 C5e/3',
+        'E5e/5 D5e/4 E5e/5 D5e/4 E5e/5 D5e/4',
+        'E5e/5 D5e/4 E5e/5 D5e/4 E5e/5 D5e/4',
+        'E5e/5 B4e/2 E5e/5 B4e/2 E5e/5 B4e/2',
+        'E5e/5 B4e/2 E5e/5 B4e/2 E5e/5 B4e/2 :|',
+        'A4h/1 B4q/2', 'B4h./2', 'A4q/1 B4q/2 C5q/3', 'C5h./3',
+        'A4q/1 B4q/2 C5q/3', 'D5h./4', 'A4q/1 B4q/2 C5q/3', 'B4h./2',
+        '|: [C5,E5]q/3,5 [C5,E5]q/3,5 [C5,E5]q/3,5',
+        '[B4,D5]q/2,4 [B4,D5]q/2,4 [B4,D5]q/2,4',
+        '[A4,C5]q/1,3 [A4,C5]q/1,3 [A4,C5]q/1,3',
+        '[G4,B4]q/1,3 [G4,B4]q/1,3 [G4,B4]q/1,3 :|',
+      ].join(' | ') },
+      { clef: 'bass', hand: 'lh', voice: [
+        ...Array(10).fill('E4q/1 E4q/1 E4q/1'),
+        '|: A3h./5', 'A3h./5', 'C4h./3', 'C4h./3',
+        'D4h./2', 'D4h./2', 'E4h./1', 'E4h./1 :|',
+        'A3h./5', 'A3h./5', 'C4h./3', 'C4h./3',
+        'D4h./2', 'D4h./2', 'E4h./1', 'E4h./1',
+        '|: C3h./1', 'G2h./3', 'A2h./2', 'E2h./5 :|',
+      ].join(' | ') },
+    ],
+  });
   add('begonvil', {
     title: 'Begonvil – Benim Yerime de Sev', short: 'Begonvil',
     composer: 'Sezen Aksu', level: 5, key: 'G#m', tempo: 90,

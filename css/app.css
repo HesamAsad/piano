@@ -889,3 +889,37 @@ table.progress-table tbody tr:hover { background: var(--surface-2); }
   .study-method { gap: 10px 18px; }
   .study-head h1 { max-width: 16ch; }
 }
+
+/* Interstellar practice companion. */
+.piece-guide-link { margin-top: 12px; }
+.interstellar-guide { margin-top: 24px; scroll-margin-top: 90px; }
+.interstellar-guide > h2 { font-size: clamp(1.5rem, 1.1rem + 1.5vw, 2.1rem); }
+.independence-step { padding: 24px 0; border-top: 1px solid var(--line); }
+.independence-step-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 14px; }
+.independence-step-head > span { font-family: var(--font-head); color: var(--lh); font-size: 1.2rem; }
+.independence-step-head h3 { margin: 0; }
+.independence-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 28px; }
+.independence-step > p, .independence-step li { max-width: 78ch; }
+.independence-step ol { padding-left: 1.2em; }
+.independence-step li + li { margin-top: 8px; }
+.coordination-table { margin: 16px 0; }
+.coordination-grid { width: 100%; max-width: 760px; border-collapse: separate; border-spacing: 4px; table-layout: fixed; }
+.coordination-grid caption { text-align: left; font-size: 0.86rem; color: var(--ink-2); padding-bottom: 10px; }
+.coordination-grid th, .coordination-grid td { padding: 10px 2px; text-align: center; border-radius: 6px; background: var(--surface-2); font-size: 0.9rem; }
+.coordination-grid th:first-child { background: transparent; }
+.coordination-grid .is-current { background: var(--accent-soft-2); color: var(--accent-ink); box-shadow: inset 0 -3px var(--accent); font-weight: 700; }
+.coordination-chant { font-family: var(--font-head); color: var(--accent-ink); font-size: 1.2rem; max-width: 760px; }
+.fingering-reference { border-top: 1px solid var(--line); padding-top: 24px; }
+.finger-placement-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.finger-placement { background: var(--surface-2); padding: 18px; border-radius: var(--radius); min-width: 0; }
+.finger-placement h3 { font-size: 1.1rem; }
+.finger-placement ol { list-style: none; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); padding: 0; gap: 5px; margin: 14px 0; }
+.finger-placement li { display: grid; justify-items: center; gap: 5px; }
+.finger-badge { display: grid; place-items: center; width: 1.8rem; height: 1.8rem; background: var(--accent); color: white; border-radius: 50%; font-size: 0.8rem; line-height: 1; font-weight: 700; }
+.finger-placement p { margin: 0; }
+@media (max-width: 700px) {
+  .independence-grid, .finger-placement-grid { grid-template-columns: 1fr; }
+  .coordination-grid { border-spacing: 2px; }
+  .coordination-grid th, .coordination-grid td { font-size: 0.72rem; padding: 10px 0; }
+  .finger-placement { padding: 14px; }
+}
