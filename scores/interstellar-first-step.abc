@@ -1,7 +1,7 @@
 X:1
-T:Interstellar (Main Theme) - 57-bar melody study
+T:Interstellar (Main Theme) - melody study with additional passage
 C:Hans Zimmer
-Z:Transcribed from the supplied two-page melody score
+Z:Transcribed from the supplied two-page melody score and additional passage
 M:3/4
 L:1/8
 Q:1/4=86
@@ -35,5 +35,12 @@ V:RH clef=treble
 [V:RH] dG dG dG | a c a c a c | a c a c a c | b e b e b e |
 % Bars 53-56
 [V:RH] b e b e b e | c' e c' e c' e | c' e c' e c' e | d' e d' e d' e |
-% Bar 57: final D6-E5 pairs
+% Bar 57: final D6-E5 pairs of the first part
 [V:RH] d' e d' e d' e |
+% Additional passage. Source bars 1-3 become 58-60. Melody only.
+% A dot before an ABC note is staccato, not extra duration.
+[V:RH] A B c B A .c | B A G A B G | B A G A B G |
+% Source bars 4-6 become 61-63
+[V:RH] A c B d c .A | B G A c B d | c d c B A .c |
+% Source bars 7-9 become 64-66; the final bar is one eighth note.
+[V:RH] B A G A B G | B A G e B .G | .A |

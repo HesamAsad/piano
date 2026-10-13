@@ -203,8 +203,9 @@
      C4qt D4qt E4qt (three quarter-note triplets in two beats)
      C4s (sixteenth)  rs (sixteenth rest)  [E4,E5]q~[E5] (tie only the upper E)
      |  |:  :|  (barlines and repeats) */
-  T.parseVoice = function (str, bpm) {
+  T.parseVoice = function (str, bpm, finalBarBeats = bpm) {
     const errors = [];
+    if (!Number.isFinite(finalBarBeats) || finalBarBeats <= 0 || finalBarBeats > bpm) errors.push('Invalid final-bar duration');
     const measures = [];
     let cur = { events: [], startRepeat: false, endRepeat: false };
     let pendingHairpin = null;
@@ -259,7 +260,8 @@
         } else { ms.tuplets.push(group); j += 2; }
       }
       if (ms.events.length === 1 && ms.events[0].kind === 'rest') { ms.events[0].measureRest = true; ms.events[0].base = 'w'; ms.events[0].dots = 0; }
-      if (Math.abs(t - bpm) > 1e-6) errors.push(`Measure ${i + 1} has ${t} beats, expected ${bpm}`);
+      const expected = i === measures.length - 1 ? finalBarBeats : bpm;
+      if (Math.abs(t - expected) > 1e-6) errors.push(`Measure ${i + 1} has ${t} beats, expected ${expected}`);
     });
     return { measures, errors };
   };
@@ -270,7 +272,7 @@
     const bpm = T.beatsPerMeasure(time);
     const errors = [];
     const staves = piece.staves.map((s, si) => {
-      const r = T.parseVoice(s.voice, bpm);
+      const r = T.parseVoice(s.voice, bpm, piece.finalBarBeats);
       r.errors.forEach((e) => errors.push(`Staff ${si + 1}: ${e}`));
       let clef = s.clef;
       r.measures.forEach((m, mi) => {
@@ -310,8 +312,11 @@
     tempoChanges.forEach((c) => {
       if (!Number.isInteger(c.measure) || c.measure < 1 || c.measure > count || !(c.bpm > 0)) errors.push('Invalid tempo change');
     });
-    return { key: piece.key || 'C', time, bpm, staves, count, errors, tempo: piece.tempo || 80, tempoChanges, doubleBars: piece.doubleBars || [], caesuras: piece.caesuras || [], daCapo: !!piece.daCapo };
+    return { key: piece.key || 'C', time, bpm, staves, count, errors, tempo: piece.tempo || 80, tempoChanges, doubleBars: piece.doubleBars || [], caesuras: piece.caesuras || [], daCapo: !!piece.daCapo, finalBarBeats: piece.finalBarBeats };
   };
+
+  // An explicitly declared short ending retains its written length, without adding rests.
+  T.measureBeats = (score, mi) => mi === score.count - 1 && score.finalBarBeats != null ? score.finalBarBeats : score.bpm;
 
   /* Measure order after expanding simple repeats. */
   T.measureOrder = function (score) {
@@ -337,6 +342,8 @@
     opts = opts || {};
     const hands = opts.hands || null; // e.g. ['rh'] or ['lh'] or null for all
     const order = opts.noRepeats ? score.staves[0].measures.map((_, i) => i) : T.measureOrder(score);
+    let total = 0;
+    const offsets = order.map((mi) => { const start = total; total += T.measureBeats(score, mi); return start; });
     const items = [];
     score.staves.forEach((st, si) => {
       const active = !hands || hands.includes(st.hand);
@@ -363,7 +370,6 @@
         }
         velAt.set(f.e, v);
       });
-      let offset = 0;
       order.forEach((mi, pass) => {
         const m = st.measures[mi];
         if (!m) return;
@@ -382,12 +388,12 @@
               }
               noteDurations[n.midi] = d;
               // A tied key can stay down while the pedal is renewed in the next bar.
-              soundDurations[n.midi] = st.pedal === 'bar' ? d + Math.max(0, score.bpm - cur.start - cur.dur) : d;
+              soundDurations[n.midi] = st.pedal === 'bar' ? d + Math.max(0, T.measureBeats(score, mm) - cur.start - cur.dur) : d;
             });
             const tiedMidis = e.tiedFromMidis || (e.tiedFrom ? e.notes.map((n) => n.midi) : []);
             // Pedal affects the sound, while key highlights retain the written lengths.
             items.push({
-              t: offset + e.start,
+              t: offsets[pass] + e.start,
               d: Math.max(...Object.values(noteDurations)),
               noteDurations,
               soundDurations,
@@ -410,23 +416,23 @@
             });
           }
         });
-        offset += score.bpm;
       });
     });
     items.sort((a, b) => a.t - b.t || a.staff - b.staff);
-    const total = order.length * score.bpm;
     const tempoMap = [];
     order.forEach((mi, pass) => {
       let tempo = score.tempo;
       (score.tempoChanges || []).forEach((c) => { if (c.measure <= mi + 1) tempo = c.bpm; });
       const ratio = tempo / score.tempo;
-      if (!tempoMap.length || tempoMap[tempoMap.length - 1].ratio !== ratio) tempoMap.push({ t: pass * score.bpm, ratio });
+      if (!tempoMap.length || tempoMap[tempoMap.length - 1].ratio !== ratio) tempoMap.push({ t: offsets[pass], ratio });
     });
     return { items, total, order, tempoMap };
   };
 
   /* Crop at measure boundaries, including the active tempo and any held opening notes. */
   T.sliceTimeline = function (tl, from, to) {
+    to = Math.min(to, tl.total);
+    from = Math.max(0, Math.min(from, to));
     const items = tl.items.filter((it) => it.t >= from && it.t < to).map((it) => {
       const resume = (it.tiedFrom || it.tiedMidis?.length) && Math.abs(it.t - from) < 1e-6;
       return Object.assign({}, it, { t: it.t - from, d: Math.min(it.d, to - it.t),

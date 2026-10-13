@@ -58,7 +58,7 @@ Object.values(MC.pieces).forEach((p) => {
     });
   })));
   const tl = T.timeline(sc);
-  ok(tl.items.length > 0 && tl.total === T.measureOrder(sc).length * sc.bpm, `${p.id}: timeline length`);
+  ok(tl.items.length > 0 && tl.total === T.measureOrder(sc).reduce((sum, mi) => sum + T.measureBeats(sc, mi), 0), `${p.id}: timeline length`);
   // key signature: notes in G must use F#, in F must use Bb
   if (p.key !== 'C' && !p.chromatic) sc.staves.forEach((st) => st.measures.forEach((m) => m.events.forEach((e) => e.notes.forEach((n) => {
     const want = T.keyAcc(p.key, n.letter);
@@ -119,30 +119,30 @@ const firstScore = T.buildScore(firstStep);
 const abcSource = fs.readFileSync(path.join(root, 'scores/interstellar-first-step.abc'), 'utf8');
 const abcVoice = abcSource.split('\n').filter((l) => l.startsWith('[V:RH]')).map((l) => l.slice(6)).join(' ');
 const abcBars = abcVoice.split('|').map((bar) => bar.trim()).filter(Boolean);
-const abcNote = /^([A-Ga-g])([,']*)(\d*)(-?)$/;
+const abcNote = /^(\.?)([A-Ga-g])([,']*)(\d*)(-?)$/;
 ok(firstScore.staves.length === 1 && firstScore.staves[0].clef === 'treble', 'melody study: one treble staff, with no added accompaniment');
-ok(firstScore.count === 57 && abcBars.length === 57, 'melody study: all 57 supplied bars');
+ok(firstScore.count === 66 && abcBars.length === 66, 'melody study: 57 original bars followed by all nine passage bars');
 ok(firstScore.tempo === 86 && /^Q:1\/4=86$/m.test(abcSource) && firstScore.time.join('/') === '3/4', 'melody study: written 86 BPM and 3/4');
 abcBars.forEach((bar, mi) => {
-  const tokens = bar.match(/[A-Ga-g][,']*\d*-?/g) || [];
-  ok(bar.replace(/[A-Ga-g][,']*\d*-?/g, '').trim() === '', `ABC ${mi + 1}: all symbols understood`);
+  const tokens = bar.match(/\.?[A-Ga-g][,']*\d*-?/g) || [];
+  ok(bar.replace(/\.?[A-Ga-g][,']*\d*-?/g, '').trim() === '', `ABC ${mi + 1}: all symbols understood`);
   const actual = firstScore.staves[0].measures[mi];
   ok(actual.events.length === tokens.length, `melody bar ${mi + 1}: every printed notehead included`);
   tokens.forEach((token, ei) => {
-    const [, letter, marks, length, tie] = abcNote.exec(token);
+    const [, stacc, letter, marks, length, tie] = abcNote.exec(token);
     const octave = (letter === letter.toUpperCase() ? 4 : 5) + [...marks].reduce((a, c) => a + (c === ',' ? -1 : 1), 0);
     const pitch = letter.toUpperCase() + octave;
     const got = actual.events[ei];
     ok(got.notes.length === 1 && T.id(got.notes[0]) === pitch && near(got.dur, (length ? +length : 1) / 2), `melody ${mi + 1}:${ei}: pitch, octave and duration match transcription`);
-    ok(!!got.tie === !!tie, `melody ${mi + 1}:${ei}: tie matches transcription`);
+    ok(!!got.tie === !!tie && !!got.stacc === !!stacc, `melody ${mi + 1}:${ei}: tie and staccato match transcription`);
     const placement = firstStep.handPositions.find((p) => mi + 1 >= p.from && mi + 1 <= p.to).rh;
     ok(got.fingers?.length === 1 && T.midi(placement[got.fingers[0] - 1]) === got.notes[0].midi, `melody ${mi + 1}:${ei}: printed fingering and hand agree`);
   });
 });
 const firstTimeline = T.timeline(firstScore);
-ok(T.measureOrder(firstScore).join() === [...Array(57).keys()].join(), 'melody study: written-out patterns play once, with no extra repeats');
-ok(firstTimeline.total === 171 && near(T.tempoClock(86).seconds(firstTimeline.total), 5130 / 43), 'melody study: 171 quarter-note beats at 86 BPM');
-ok(firstScore.staves[0].measures.reduce((n, m) => n + m.events.length, 0) === 183 && T.onsets(firstTimeline).length === 182, 'melody study: 183 noteheads, 182 attacks after the single tie');
+ok(T.measureOrder(firstScore).join() === [...Array(66).keys()].join(), 'melody study: written-out patterns play once, with no extra repeats');
+ok(firstTimeline.total === 195.5 && near(T.tempoClock(86).seconds(firstTimeline.total), 5865 / 43), 'melody study: 195.5 quarter-note beats at 86 BPM');
+ok(firstScore.staves[0].measures.reduce((n, m) => n + m.events.length, 0) === 232 && T.onsets(firstTimeline).length === 231, 'melody study: 232 noteheads, 231 attacks after the single tie');
 const sustainedB = firstTimeline.items.find((it) => it.mi === 5);
 ok(sustainedB.midis.join() === '71' && sustainedB.d === 6 && firstTimeline.items.find((it) => it.mi === 6).midis.length === 0, 'B4 holds six beats through bars 6–7 without re-striking');
 ok(T.sliceTimeline(firstTimeline, 18, 21).items[0].midis.join() === '71' && T.sliceTimeline(firstTimeline, 18, 21).items[0].d === 3, 'starting practice at bar 7 sounds the tied continuation for three beats');
@@ -154,7 +154,29 @@ ok(melodyBar(8) === 'A4:1 B4:1 C5:1' && melodyBar(9) === 'B4:1 A4:1 B4:1', 'open
   const expected = Array(3).fill(`${high}:0.5 ${low}:0.5`).join(' ');
   ok(melodyBar(n) === expected && melodyBar(n + 1) === expected, `bars ${n}–${n + 1}: six alternating eighths in the correct register`);
 });
-ok(firstStep.sections.map((s) => s.from).join() === '1,5,12,20,28,36,44,46,50', 'practice sections follow the printed section markers');
+ok(firstStep.sections.map((s) => s.from).join() === '1,1,5,12,20,28,36,44,46,50,58', 'practice sections follow the printed section markers');
+
+// The new image has eight complete bars plus one final staccato eighth, with no bass.
+const addedReference = [
+  'A4 B4 C5 B4 A4 C5', 'B4 A4 G4 A4 B4 G4', 'B4 A4 G4 A4 B4 G4',
+  'A4 C5 B4 D5 C5 A4', 'B4 G4 A4 C5 B4 D5', 'C5 D5 C5 B4 A4 C5',
+  'B4 A4 G4 A4 B4 G4', 'B4 A4 G4 E5 B4 G4', 'A4',
+];
+addedReference.forEach((notes, i) => ok(melodyBar(58 + i) === notes.split(' ').map((n) => n + ':0.5').join(' '), `additional passage source bar ${i + 1}: every pitch and eighth-note duration`));
+const added = T.sliceTimeline(firstTimeline, 171, 198);
+ok(added.total === 24.5 && T.onsets(added).length === 49, 'additional section contains 49 notes and ends after 24.5 beats');
+ok(added.items.filter((it) => it.stacc).map((it) => `${it.mi + 1}:${it.ei + 1}`).join() === '58:6,61:6,63:6,65:6,66:1', 'all five staccato marks match the source');
+ok(T.sliceTimeline(firstTimeline, 0, 171).total === 171 && T.onsets(T.sliceTimeline(firstTimeline, 0, 171)).length === 182, 'first part retains its original duration and 182 attacks');
+const shortEnd = T.sliceTimeline(firstTimeline, 195, 198);
+ok(shortEnd.total === 0.5 && shortEnd.items.length === 1 && shortEnd.items[0].midis.join() === '69' && shortEnd.items[0].stacc, 'final-bar practice ends after the single staccato A4, with no padded silence');
+// Short final bars require explicit notation metadata; ordinary incomplete bars remain errors.
+ok(T.parseVoice('C4h. | D4e', 3).errors.length > 0, 'undeclared short final bar is rejected');
+ok(T.parseVoice('C4e | D4e', 3, 0.5).errors.length > 0, 'declaring a short ending does not allow incomplete earlier bars');
+[0, -1, 4, NaN].forEach((d) => ok(T.parseVoice('D4e', 3, d).errors.length > 0, 'invalid final-bar length is rejected'));
+const shortRepeat = T.buildScore({ time: [3, 4], tempo: 80, finalBarBeats: 0.5, daCapo: true, tempoChanges: [{ measure: 2, bpm: 60 }], staves: [{ clef: 'treble', voice: 'C4h. | D4e' }] });
+const srt = T.timeline(shortRepeat);
+ok(!shortRepeat.errors.length && srt.total === 7 && srt.items.map((it) => it.t).join() === '0,3,3.5,6.5', 'playback offsets account for short endings when a piece repeats');
+ok(srt.tempoMap.map((c) => c.t).join() === '0,3,3.5,6.5', 'tempo changes use the actual bar offsets');
 
 // ---- Begonvil: separate vocal part, chromatic spelling, pedal, and directed rolls.
 const begonvil = T.buildScore(MC.pieces.begonvil);

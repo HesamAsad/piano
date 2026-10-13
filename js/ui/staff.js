@@ -422,6 +422,7 @@
           const si = score.staves.length - 1;
           const cy = (tops[si] + 4 + ext[si].rows.counts) * SP;
           const onsets = new Set(mx.cols.map((c) => c.t));
+          const bpm = T.measureBeats(score, mx.mi) || 4;
           const xAt = (b) => {
             const cols = mx.cols;
             for (let i = 0; i < cols.length; i++) {
@@ -435,9 +436,8 @@
             }
             const last = cols[cols.length - 1];
             const a = last.x + last.headW / 2;
-            return a + ((mx.x1 - 0.6 - a) * (b - last.t)) / Math.max(0.5, (score.bpm || 4) - last.t);
+            return a + ((mx.x1 - 0.6 - a) * (b - last.t)) / Math.max(0.5, bpm - last.t);
           };
-          const bpm = score.bpm || 4;
           for (let b = 0; b < bpm - 1e-6; b += 0.5) {
             const isBeat = Math.abs(b - Math.round(b)) < 1e-6;
             const onset = [...onsets].some((t) => Math.abs(t - b) < 1e-6);

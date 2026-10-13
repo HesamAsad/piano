@@ -260,6 +260,8 @@
     composer: 'Hans Zimmer', level: 5,
     keyLabel: 'White keys', time: [3, 4], tempo: 86, extendedRange: true,
     practiceGuide: 'interstellar-first-step',
+    finalBarBeats: 0.5,
+    doubleBars: [57],
     handPositions: [
       { from: 1, to: 4, rh: ['E4', 'F4', 'G4', 'A4', 'B4'] },
       { from: 5, to: 43, rh: ['A4', 'B4', 'C5', 'D5', 'E5'] },
@@ -270,9 +272,12 @@
       { from: 52, to: 53, rh: ['E5', 'F5', 'G5', 'A5', 'B5'] },
       { from: 54, to: 55, rh: ['E5', 'G5', 'A5', 'B5', 'C6'] },
       { from: 56, to: 57, rh: ['E5', 'G5', 'A5', 'C6', 'D6'] },
+      { from: 58, to: 64, rh: ['G4', 'A4', 'B4', 'C5', 'D5'] },
+      { from: 65, to: 66, rh: ['G4', 'A4', 'B4', 'D5', 'E5'] },
     ],
-    note: 'All 57 measures from the supplied two-page melody score, in 3/4 at 86 BPM. Hold B4 through the tie in bars 6–7. Repeated patterns are written out and play once in order. Suggested right-hand fingerings are added for practice.',
+    note: 'The 57-bar first part is followed by the additional melody passage in bars 58–66, at 86 BPM. Hold B4 through the tie in bars 6–7. The final bar contains just one staccato eighth note, as supplied. Suggested right-hand fingerings are added for practice.',
     sections: [
+      { label: 'First part', from: 1, to: 57 },
       { label: 'Opening · 0:03', from: 1, to: 4 },
       { label: 'Sustained phrase · 0:11', from: 5, to: 11 },
       { label: 'Long E5 pattern · 0:26', from: 12, to: 19 },
@@ -282,6 +287,7 @@
       { label: 'Return to E4 · 1:33', from: 44, to: 45 },
       { label: 'Eighth-note pairs · 1:37', from: 46, to: 49 },
       { label: 'Upper register · 1:45', from: 50, to: 57 },
+      { label: 'Additional passage', from: 58, to: 66 },
     ],
     staves: [
       { clef: 'treble', hand: 'rh', voice: [
@@ -322,6 +328,17 @@
         'C6e/5 E5e/1 C6e/5 E5e/1 C6e/5 E5e/1',
         'D6e/5 E5e/1 D6e/5 E5e/1 D6e/5 E5e/1',
         'D6e/5 E5e/1 D6e/5 E5e/1 D6e/5 E5e/1',
+        // Additional passage, source bars 1–8 become 58–65. Dots are staccato.
+        'A4e/2 B4e/3 C5e/4 B4e/3 A4e/2 C5e*/4',
+        'B4e/3 A4e/2 G4e/1 A4e/2 B4e/3 G4e/1',
+        'B4e/3 A4e/2 G4e/1 A4e/2 B4e/3 G4e/1',
+        'A4e/2 C5e/4 B4e/3 D5e/5 C5e/4 A4e*/2',
+        'B4e/3 G4e/1 A4e/2 C5e/4 B4e/3 D5e/5',
+        'C5e/4 D5e/5 C5e/4 B4e/3 A4e/2 C5e*/4',
+        'B4e/3 A4e/2 G4e/1 A4e/2 B4e/3 G4e/1',
+        'B4e/3 A4e/2 G4e/1 E5e/5 B4e/3 G4e*/1',
+        // Source bar 9: a short captured ending, with no invented rests.
+        'A4e*/2',
       ].join(' | ') },
     ],
   });

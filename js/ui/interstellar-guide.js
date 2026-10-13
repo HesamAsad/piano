@@ -1,4 +1,4 @@
-/* Practice companion for the supplied 57-bar, single-staff Interstellar score. */
+/* Practice companion for the supplied single-staff Interstellar score and additional passage. */
 (function (MC) {
   'use strict';
   const U = MC.util, { h } = U, A = MC.audio;
@@ -48,7 +48,7 @@
       h('h2#interstellar-guide-title', null, 'Follow the melody, one phrase at a time.'),
       h('p', null, 'A single melody line in 3/4 at 86 BPM. Learn the long notes first, then the steady quarters and flowing eighth-note pairs.'),
       h('div.callout.callout-plain', null,
-        h('p', null, 'This study follows all 57 measures of the supplied two-page score. The “repeat pattern” passages are already written out. Play from bar 1 to bar 57 once; section timestamps are the reference labels printed on the sheet.'),
+        h('p', null, 'The first part contains the 57 measures of the two-page score. The additional passage follows in bars 58–66, ending with a single eighth note in the short final bar. Repeated patterns are already written out; play each bar once. Timestamps label sections of the first part.'),
         h('a', { href: 'scores/interstellar-first-step.abc', download: 'interstellar-first-step.abc' }, 'Download this score as ABC')),
       step(1, 'Hear the three rhythms',
         U.segmented(Object.entries(patterns).map(([value, p]) => ({ value, label: p.label })), pattern, (v) => { pattern = v; draw(); }, 'Melody rhythm'),
@@ -72,13 +72,19 @@
         step(5, 'Prepare each register change',
           h('p', null, 'Return to E4 for bars 44–45. The pairs then rise through C5–E4, D5–G4, A5–C5, B5–E5, C6–E5 and D6–E5. Every pair lasts two bars.'),
           h('p', null, 'Learn each pair slowly before joining it to the next. For D6–E5, release and move between notes if needed. Pause if the movement becomes uncomfortable.'),
-          range('Practise the upper register · bars 50–57', 50, 57))),
+          range('Practise the upper register · bars 50–57', 50, 57)),
+        step(6, 'Continue into the additional passage',
+          h('p', null, 'After bar 57, move down to the G4–D5 position. Begin A4–B4–C5–B4–A4–C5, counting one eighth note on each “1 & 2 & 3 &”.'),
+          h('p', null, 'The dots on the last notes of bars 58, 61, 63 and 65 mean staccato: release those notes lightly while keeping the same timing. Finish with the single staccato A4 in bar 66. The repeated left-hand E is omitted from this melody-only source.'),
+          range('Practise the additional passage · bars 58–66', 58, 66))),
       h('section.fingering-reference', { 'aria-labelledby': 'finger-placement-title' },
         h('div.eyebrow', null, 'Suggested right-hand fingering'), h('h2#finger-placement-title', null, 'Where each finger goes'),
         h('p', null, '1 = thumb, 2 = index, 3 = middle, 4 = ring, 5 = little finger. These fingerings are practice suggestions added to the supplied score. The printed numbers and keyboard hand agree.'),
         h('div.finger-placement-grid', null,
           placement('Opening & return · bars 1–4, 44–45', ['E4', 'F4', 'G4', 'A4', 'B4'], 'Play E4 with the thumb. The other fingers show a starting position; they do not add notes.'),
-          placement('Main melody · bars 5–43', ['A4', 'B4', 'C5', 'D5', 'E5'], 'Move to A–E before bar 5. A = 1, B = 2, C = 3, D = 4 and high E = 5.')),
+          placement('Main melody · bars 5–43', ['A4', 'B4', 'C5', 'D5', 'E5'], 'Move to A–E before bar 5. A = 1, B = 2, C = 3, D = 4 and high E = 5.'),
+          placement('Additional passage · bars 58–64', ['G4', 'A4', 'B4', 'C5', 'D5'], 'Return to G–D after the upper-register ending: G = 1, A = 2, B = 3, C = 4 and D = 5.'),
+          placement('Closing notes · bars 65–66', ['G4', 'A4', 'B4', 'D5', 'E5'], 'Use 5 for the E5 in bar 65, with a small hand movement if needed. Finish on A4 with finger 2. D5 marks a resting position; it is not played in these two bars.')),
         h('h3', { style: { marginTop: '24px' } }, 'Alternating pairs · bars 46–57'),
         h('p', null, 'Use 5 for the upper note and 1 for the lower note. Each pair repeats three times per bar. These are successive notes; let the hand move as needed.'),
         h('div.finger-placement-grid', null, [
