@@ -7,40 +7,28 @@ L:1/8
 Q:1/4=86
 K:C
 V:RH clef=treble
-% Page 1. Bars 1-4: Opening - 0:03
+% A dot before an ABC note means staccato. The short bar 20 is preserved.
+% Bars 1-4: Opening
 [V:RH] E2 E2 E2 | E2 E2 E2 | E2 E2 E2 | E2 E2 E2 |
-% Bars 5-8: Sustained phrase - 0:11. B4 is tied across bars 6-7.
-[V:RH] A6 | B6- | B6 | A2 B2 c2 |
-% Bars 9-12: Long E5 pattern begins at bar 12 - 0:26
-[V:RH] B2 A2 B2 | c6 | B6 | A2 e4 |
-% Bars 13-16
-[V:RH] A2 e4 | B2 e4 | B2 e4 | c2 e4 |
-% Bars 17-20: Repeat pattern begins at bar 20 - 0:43
-[V:RH] c2 e4 | d2 e4 | d2 e2 B2 | A2 e4 |
-% Bars 21-24
-[V:RH] A2 e4 | B2 e4 | B2 e4 | c2 e4 |
-% Bars 25-28: Quarter-note pattern begins at bar 28 - 0:59
-[V:RH] c2 e4 | d2 e4 | d2 e2 B2 | A2 e2 A2 |
-% Bars 29-32
-[V:RH] A2 e2 A2 | B2 e2 B2 | B2 e2 B2 | c2 e2 c2 |
-% Page 2. Bars 33-36: Repeat pattern begins at bar 36 - 1:16
-[V:RH] c2 e2 c2 | d2 e2 d2 | d2 e2 B2 | A2 e2 A2 |
-% Bars 37-40
-[V:RH] A2 e2 A2 | B2 e2 B2 | B2 e2 B2 | c2 e2 c2 |
-% Bars 41-44: Return to E4 at bar 44 - 1:33
-[V:RH] c2 e2 c2 | d2 e2 d2 | d2 e2 B2 | E2 E2 E2 |
-% Bars 45-48: Eighth-note pairs begin at bar 46 - 1:37
-[V:RH] E2 E2 E2 | cE cE cE | cE cE cE | dG dG dG |
-% Bars 49-52: Upper register begins at bar 50 - 1:45
-[V:RH] dG dG dG | a c a c a c | a c a c a c | b e b e b e |
-% Bars 53-56
-[V:RH] b e b e b e | c' e c' e c' e | c' e c' e c' e | d' e d' e d' e |
-% Bar 57: final D6-E5 pairs of the first part
-[V:RH] d' e d' e d' e |
-% Additional passage. Source bars 1-3 become 58-60. Melody only.
-% A dot before an ABC note is staccato, not extra duration.
+% Bars 5-11: Sustained phrase; tied B4 in bars 6-7
+[V:RH] A6 | B6- | B6 | A2 B2 c2 | B2 A2 B2 | c6 | B6 |
+% Bars 12-14: Additional passage, source bars 1-3
 [V:RH] A B c B A .c | B A G A B G | B A G A B G |
-% Source bars 4-6 become 61-63
+% Bars 15-17: Additional passage, source bars 4-6
 [V:RH] A c B d c .A | B G A c B d | c d c B A .c |
-% Source bars 7-9 become 64-66; the final bar is one eighth note.
+% Bars 18-20: Additional passage, source bars 7-9; bar 20 is one eighth note
 [V:RH] B A G A B G | B A G e B .G | .A |
+% Bars 21-28: Long E5 pattern
+[V:RH] A2 e4 | A2 e4 | B2 e4 | B2 e4 | c2 e4 | c2 e4 | d2 e4 | d2 e2 B2 |
+% Bars 29-36: Repeat long pattern
+[V:RH] A2 e4 | A2 e4 | B2 e4 | B2 e4 | c2 e4 | c2 e4 | d2 e4 | d2 e2 B2 |
+% Bars 37-44: Quarter-note pattern
+[V:RH] A2 e2 A2 | A2 e2 A2 | B2 e2 B2 | B2 e2 B2 | c2 e2 c2 | c2 e2 c2 | d2 e2 d2 | d2 e2 B2 |
+% Bars 45-52: Repeat quarter-note pattern
+[V:RH] A2 e2 A2 | A2 e2 A2 | B2 e2 B2 | B2 e2 B2 | c2 e2 c2 | c2 e2 c2 | d2 e2 d2 | d2 e2 B2 |
+% Bars 53-54: Return to E4
+[V:RH] E2 E2 E2 | E2 E2 E2 |
+% Bars 55-58: Eighth-note pairs
+[V:RH] cE cE cE | cE cE cE | dG dG dG | dG dG dG |
+% Bars 59-66: Upper register
+[V:RH] a c a c a c | a c a c a c | b e b e b e | b e b e b e | c' e c' e c' e | c' e c' e c' e | d' e d' e d' e | d' e d' e d' e |

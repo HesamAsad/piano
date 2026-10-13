@@ -203,7 +203,7 @@
      C4qt D4qt E4qt (three quarter-note triplets in two beats)
      C4s (sixteenth)  rs (sixteenth rest)  [E4,E5]q~[E5] (tie only the upper E)
      |  |:  :|  (barlines and repeats) */
-  T.parseVoice = function (str, bpm, finalBarBeats = bpm) {
+  T.parseVoice = function (str, bpm, finalBarBeats = bpm, barBeats = {}) {
     const errors = [];
     if (!Number.isFinite(finalBarBeats) || finalBarBeats <= 0 || finalBarBeats > bpm) errors.push('Invalid final-bar duration');
     const measures = [];
@@ -246,6 +246,9 @@
       lastEvent = ev;
     }
     close();
+    Object.entries(barBeats).forEach(([bar, beats]) => {
+      if (!Number.isInteger(+bar) || +bar < 1 || +bar > measures.length || !Number.isFinite(beats) || beats <= 0 || beats > bpm) errors.push('Invalid bar duration');
+    });
     measures.forEach((ms, i) => {
       let t = 0;
       ms.events.forEach((ev) => { ev.start = t; t += ev.dur; });
@@ -260,7 +263,7 @@
         } else { ms.tuplets.push(group); j += 2; }
       }
       if (ms.events.length === 1 && ms.events[0].kind === 'rest') { ms.events[0].measureRest = true; ms.events[0].base = 'w'; ms.events[0].dots = 0; }
-      const expected = i === measures.length - 1 ? finalBarBeats : bpm;
+      const expected = barBeats[i + 1] ?? (i === measures.length - 1 ? finalBarBeats : bpm);
       if (Math.abs(t - expected) > 1e-6) errors.push(`Measure ${i + 1} has ${t} beats, expected ${expected}`);
     });
     return { measures, errors };
@@ -272,7 +275,7 @@
     const bpm = T.beatsPerMeasure(time);
     const errors = [];
     const staves = piece.staves.map((s, si) => {
-      const r = T.parseVoice(s.voice, bpm, piece.finalBarBeats);
+      const r = T.parseVoice(s.voice, bpm, piece.finalBarBeats, piece.barBeats);
       r.errors.forEach((e) => errors.push(`Staff ${si + 1}: ${e}`));
       let clef = s.clef;
       r.measures.forEach((m, mi) => {
@@ -312,11 +315,16 @@
     tempoChanges.forEach((c) => {
       if (!Number.isInteger(c.measure) || c.measure < 1 || c.measure > count || !(c.bpm > 0)) errors.push('Invalid tempo change');
     });
-    return { key: piece.key || 'C', time, bpm, staves, count, errors, tempo: piece.tempo || 80, tempoChanges, doubleBars: piece.doubleBars || [], caesuras: piece.caesuras || [], daCapo: !!piece.daCapo, finalBarBeats: piece.finalBarBeats };
+    return { key: piece.key || 'C', time, bpm, staves, count, errors, tempo: piece.tempo || 80, tempoChanges, doubleBars: piece.doubleBars || [], caesuras: piece.caesuras || [], daCapo: !!piece.daCapo, finalBarBeats: piece.finalBarBeats, barBeats: piece.barBeats || {} };
   };
 
-  // An explicitly declared short ending retains its written length, without adding rests.
-  T.measureBeats = (score, mi) => mi === score.count - 1 && score.finalBarBeats != null ? score.finalBarBeats : score.bpm;
+  // Explicit short bars retain their written length, including when a passage moves.
+  T.measureBeats = (score, mi) => score.barBeats?.[mi + 1] ?? (mi === score.count - 1 && score.finalBarBeats != null ? score.finalBarBeats : score.bpm);
+  T.measureStart = (score, mi) => {
+    let start = 0;
+    for (let i = 0; i < mi; i++) start += T.measureBeats(score, i);
+    return start;
+  };
 
   /* Measure order after expanding simple repeats. */
   T.measureOrder = function (score) {
@@ -426,7 +434,16 @@
       const ratio = tempo / score.tempo;
       if (!tempoMap.length || tempoMap[tempoMap.length - 1].ratio !== ratio) tempoMap.push({ t: offsets[pass], ratio });
     });
-    return { items, total, order, tempoMap };
+    let beatGrid;
+    if (order.some((mi) => T.measureBeats(score, mi) !== score.bpm)) {
+      beatGrid = [];
+      order.forEach((mi, pass) => {
+        for (let beat = 0; beat < T.measureBeats(score, mi) - 1e-6; beat += 0.5) {
+          beatGrid.push({ t: offsets[pass] + beat, accent: beat === 0 ? 2 : Number.isInteger(beat) ? 1 : 0 });
+        }
+      });
+    }
+    return { items, total, order, tempoMap, beatGrid };
   };
 
   /* Crop at measure boundaries, including the active tempo and any held opening notes. */
@@ -443,7 +460,8 @@
     const map = tl.tempoMap || [{ t: 0, ratio: 1 }];
     const active = map.filter((c) => c.t <= from).pop() || map[0];
     const tempoMap = [{ t: 0, ratio: active.ratio }, ...map.filter((c) => c.t > from && c.t < to).map((c) => ({ t: c.t - from, ratio: c.ratio }))];
-    return { items, total: to - from, tempoMap };
+    const beatGrid = tl.beatGrid?.filter((c) => c.t >= from && c.t < to).map((c) => ({ ...c, t: c.t - from }));
+    return { items, total: to - from, tempoMap, beatGrid };
   };
 
   /* Piecewise tempo clock. Ratios let the speed slider scale every written tempo. */

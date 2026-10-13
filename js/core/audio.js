@@ -383,6 +383,7 @@
     constructor(opts) {
       this.o = Object.assign({ bpm: 80, events: [], beatsPerBar: 4, metronome: false, countIn: 0, subdivide: false, clickOnly: false, loop: false, end: null }, opts);
       this.events = this.o.events.slice().sort((a, b) => a.t - b.t);
+      this.beatGrid = this.o.beatGrid?.filter((c) => this.o.subdivide || c.accent > 0);
       this.end = this.o.end != null ? this.o.end : this.events.reduce((m, e) => Math.max(m, e.t + e.d), 0);
       this.playing = false;
       this.pos = -this.o.countIn; // current beat
@@ -409,6 +410,8 @@
       if (this.nextIdx < 0) this.nextIdx = this.events.length;
       this.visIdx = this.nextIdx;
       this.nextClick = Math.ceil(fromBeat * (this.o.subdivide ? 2 : 1) - 1e-6) / (this.o.subdivide ? 2 : 1);
+      this.nextGridClick = this.beatGrid?.findIndex((c) => c.t >= Math.max(0, fromBeat) - 1e-6);
+      if (this.nextGridClick === -1) this.nextGridClick = this.beatGrid.length;
     }
     play(fromBeat) {
       if (this.playing) return;
@@ -454,17 +457,21 @@
       const step = this.o.subdivide ? 0.5 : 1;
       const clickEnd = this.end - 1e-6;
       while (true) {
-        const b = this.nextClick;
+        const useGrid = this.nextClick >= 0 && this.beatGrid;
+        const gridClick = useGrid ? this.beatGrid[this.nextGridClick] : null;
+        if (useGrid && !gridClick) break;
+        const b = gridClick ? gridClick.t : this.nextClick;
         const t = this.beatToTime(b);
         if (t > horizon) break;
         const inCountIn = b < 0;
         if ((this.o.metronome || inCountIn) && (b < clickEnd || inCountIn) && !this.silent) {
           const bar = this.o.beatsPerBar;
           const isBeat = Math.abs(b - Math.round(b)) < 1e-6;
-          const accent = !isBeat ? 0 : T.mod(Math.round(b), bar) === 0 ? 2 : 1;
+          const accent = gridClick ? gridClick.accent : !isBeat ? 0 : T.mod(Math.round(b), bar) === 0 ? 2 : 1;
           if (!(this.o.muteClicksAfter != null && b >= this.o.muteClicksAfter && !inCountIn)) A.click(t, accent);
         }
         this.nextClick = b + step;
+        if (useGrid) this.nextGridClick++;
       }
     }
     _visual() {

@@ -134,8 +134,8 @@
       const r = range();
       const tl = T.timeline(score, { hands: hands || activeHands(), noRepeats: !!r });
       if (!r) return tl;
-      const off = r[0] * score.bpm;
-      return T.sliceTimeline(tl, off, (r[1] + 1) * score.bpm);
+      const off = T.measureStart(score, r[0]);
+      return T.sliceTimeline(tl, off, T.measureStart(score, r[1] + 1));
     }
 
     function renderStaff() {
@@ -257,7 +257,7 @@
       const active = [];
       const events = tl.items.map((it) => ({ t: it.t, d: it.d, midis: it.midis, durations: it.midis.map((m) => it.soundDurations?.[m] ?? it.noteDurations?.[m] ?? it.d), keyDurations: it.midis.map((m) => it.noteDurations?.[m] ?? it.d), pedaled: it.pedaled, vel: it.vel, stacc: it.stacc, spread: it.spread, rollDown: it.rollDown, data: it, silent: cfg.silentHands ? cfg.silentHands.includes(it.hand) : !cfg.sound }));
       tr = new A.Transport({
-        bpm: bpm(), tempoMap: tl.tempoMap, events, beatsPerBar: score.time[0], metronome: st.metronome || !!cfg.metronome, countIn: cfg.countIn || 0, end: tl.total,
+        bpm: bpm(), tempoMap: tl.tempoMap, beatGrid: tl.beatGrid, events, beatsPerBar: score.time[0], metronome: st.metronome || !!cfg.metronome, countIn: cfg.countIn || 0, end: tl.total,
         onEvent: (e) => {
           if (!cfg.highlight) return;
           active.push(e);

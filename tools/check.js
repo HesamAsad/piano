@@ -121,7 +121,7 @@ const abcVoice = abcSource.split('\n').filter((l) => l.startsWith('[V:RH]')).map
 const abcBars = abcVoice.split('|').map((bar) => bar.trim()).filter(Boolean);
 const abcNote = /^(\.?)([A-Ga-g])([,']*)(\d*)(-?)$/;
 ok(firstScore.staves.length === 1 && firstScore.staves[0].clef === 'treble', 'melody study: one treble staff, with no added accompaniment');
-ok(firstScore.count === 66 && abcBars.length === 66, 'melody study: 57 original bars followed by all nine passage bars');
+ok(firstScore.count === 66 && abcBars.length === 66, 'melody study: all 57 original bars and nine inserted passage bars');
 ok(firstScore.tempo === 86 && /^Q:1\/4=86$/m.test(abcSource) && firstScore.time.join('/') === '3/4', 'melody study: written 86 BPM and 3/4');
 abcBars.forEach((bar, mi) => {
   const tokens = bar.match(/\.?[A-Ga-g][,']*\d*-?/g) || [];
@@ -149,12 +149,12 @@ ok(T.sliceTimeline(firstTimeline, 18, 21).items[0].midis.join() === '71' && T.sl
 // An independent visual check of the distinctive transitions in the two supplied images.
 const melodyBar = (n) => firstScore.staves[0].measures[n - 1].events.map((e) => `${T.id(e.notes[0])}:${e.dur}`).join(' ');
 ok(melodyBar(8) === 'A4:1 B4:1 C5:1' && melodyBar(9) === 'B4:1 A4:1 B4:1', 'opening motifs match the image');
-[19, 27, 35, 43].forEach((n) => ok(melodyBar(n) === 'D5:1 E5:1 B4:1', `bar ${n}: phrase resolves to B4`));
-[[46, 'C5', 'E4'], [48, 'D5', 'G4'], [50, 'A5', 'C5'], [52, 'B5', 'E5'], [54, 'C6', 'E5'], [56, 'D6', 'E5']].forEach(([n, high, low]) => {
+[28, 36, 44, 52].forEach((n) => ok(melodyBar(n) === 'D5:1 E5:1 B4:1', `bar ${n}: phrase resolves to B4`));
+[[55, 'C5', 'E4'], [57, 'D5', 'G4'], [59, 'A5', 'C5'], [61, 'B5', 'E5'], [63, 'C6', 'E5'], [65, 'D6', 'E5']].forEach(([n, high, low]) => {
   const expected = Array(3).fill(`${high}:0.5 ${low}:0.5`).join(' ');
   ok(melodyBar(n) === expected && melodyBar(n + 1) === expected, `bars ${n}–${n + 1}: six alternating eighths in the correct register`);
 });
-ok(firstStep.sections.map((s) => s.from).join() === '1,1,5,12,20,28,36,44,46,50,58', 'practice sections follow the printed section markers');
+ok(firstStep.sections.map((s) => s.from).join() === '1,1,5,12,21,29,37,45,53,55,59', 'practice sections follow the printed section markers');
 
 // The new image has eight complete bars plus one final staccato eighth, with no bass.
 const addedReference = [
@@ -162,13 +162,20 @@ const addedReference = [
   'A4 C5 B4 D5 C5 A4', 'B4 G4 A4 C5 B4 D5', 'C5 D5 C5 B4 A4 C5',
   'B4 A4 G4 A4 B4 G4', 'B4 A4 G4 E5 B4 G4', 'A4',
 ];
-addedReference.forEach((notes, i) => ok(melodyBar(58 + i) === notes.split(' ').map((n) => n + ':0.5').join(' '), `additional passage source bar ${i + 1}: every pitch and eighth-note duration`));
-const added = T.sliceTimeline(firstTimeline, 171, 198);
+addedReference.forEach((notes, i) => ok(melodyBar(12 + i) === notes.split(' ').map((n) => n + ':0.5').join(' '), `additional passage source bar ${i + 1}: every pitch and eighth-note duration`));
+const added = T.sliceTimeline(firstTimeline, 33, 57.5);
 ok(added.total === 24.5 && T.onsets(added).length === 49, 'additional section contains 49 notes and ends after 24.5 beats');
-ok(added.items.filter((it) => it.stacc).map((it) => `${it.mi + 1}:${it.ei + 1}`).join() === '58:6,61:6,63:6,65:6,66:1', 'all five staccato marks match the source');
-ok(T.sliceTimeline(firstTimeline, 0, 171).total === 171 && T.onsets(T.sliceTimeline(firstTimeline, 0, 171)).length === 182, 'first part retains its original duration and 182 attacks');
-const shortEnd = T.sliceTimeline(firstTimeline, 195, 198);
-ok(shortEnd.total === 0.5 && shortEnd.items.length === 1 && shortEnd.items[0].midis.join() === '69' && shortEnd.items[0].stacc, 'final-bar practice ends after the single staccato A4, with no padded silence');
+ok(added.items.filter((it) => it.stacc).map((it) => `${it.mi + 1}:${it.ei + 1}`).join() === '12:6,15:6,17:6,19:6,20:1', 'all five staccato marks match the source');
+ok(T.onsets(T.sliceTimeline(firstTimeline, 0, 33)).length === 22 && T.onsets(T.sliceTimeline(firstTimeline, 57.5, 195.5)).length === 160, 'all 182 original attacks remain around the inserted passage');
+const shortEnd = T.sliceTimeline(firstTimeline, 57, 57.5);
+ok(shortEnd.total === 0.5 && shortEnd.items.length === 1 && shortEnd.items[0].midis.join() === '69' && shortEnd.items[0].stacc, 'bar 20 practice contains the single staccato A4, with no padded silence');
+ok(T.measureStart(firstScore, 11) === 33 && T.measureStart(firstScore, 20) === 57.5 && T.measureStart(firstScore, 66) === 195.5, 'section boundaries account for the short interior bar');
+ok(firstTimeline.items.find((it) => it.mi === 20).t === 57.5 && melodyBar(21) === 'A4:1 E5:2', 'long E5 pattern follows immediately after the moved passage');
+const middleShort = T.buildScore({ time: [3, 4], barBeats: { 2: 0.5 }, staves: [{ clef: 'treble', voice: 'C4h. | D4e | E4h.' }] });
+ok(!middleShort.errors.length && T.timeline(middleShort).items.map((it) => it.t).join() === '0,3,3.5', 'explicit interior short bar preserves subsequent note timing');
+[{ 0: 0.5 }, { 4: 0.5 }, { 1.5: 0.5 }, { 2: 0 }, { 2: 4 }, { 2: NaN }].forEach((bars) => ok(T.parseVoice('C4h. | D4e | E4h.', 3, undefined, bars).errors.length > 0, 'invalid short-bar location or duration is rejected'));
+ok(firstTimeline.beatGrid.filter((c) => c.t >= 57 && c.t < 60.5 && c.accent > 0).map((c) => `${c.t}:${c.accent}`).join() === '57:2,57.5:2,58.5:1,59.5:1', 'metronome resets its downbeat after the short bar');
+ok(T.sliceTimeline(firstTimeline, 57.5, 81.5).beatGrid.filter((c) => c.t < 3 && c.accent > 0).map((c) => c.t).join() === '0,1,2', 'section playback uses local beat positions after the short bar');
 // Short final bars require explicit notation metadata; ordinary incomplete bars remain errors.
 ok(T.parseVoice('C4h. | D4e', 3).errors.length > 0, 'undeclared short final bar is rejected');
 ok(T.parseVoice('C4e | D4e', 3, 0.5).errors.length > 0, 'declaring a short ending does not allow incomplete earlier bars');
