@@ -591,7 +591,7 @@
       const panel = h('div.panel', { style: { marginTop: '10px' } });
       const piece = MC.pieces[id];
       const related = id === 'interstellar' ? 'interstellar-first-step' : id === 'interstellar-first-step' ? 'interstellar' : null;
-      if (related) m.append(h('p.small', { style: { margin: '10px 0' } }, 'Other arrangement: ', h('a', { href: '#/pieces/' + related }, MC.pieces[related].title), related === 'interstellar-first-step' ? ' · includes hand-independence practice and finger placements' : ''));
+      if (related) m.append(h('p.small', { style: { margin: '10px 0' } }, 'Other arrangement: ', h('a', { href: '#/pieces/' + related }, MC.pieces[related].title), related === 'interstellar-first-step' ? ' · includes a melody practice guide and finger placements' : ''));
       const player = MC.PiecePlayer(piece, { mode: 'watch' });
       panel.appendChild(player.el);
       if (piece.practiceGuide === 'interstellar-first-step') {
@@ -600,7 +600,7 @@
           onRange: (from, to) => { player.setRange(from, to); panel.scrollIntoView({ block: 'start', behavior: U.reducedMotion() ? 'auto' : 'smooth' }); },
         });
         panel.addEventListener('click', () => guide.stop(), true);
-        m.append(h('div.piece-guide-link', null, btn('Hand-independence guide & finger placements ↓', () => guide.el.scrollIntoView({ block: 'start', behavior: U.reducedMotion() ? 'auto' : 'smooth' }), 'btn-small')), panel, guide.el);
+        m.append(h('div.piece-guide-link', null, btn('Practice guide & finger placements ↓', () => guide.el.scrollIntoView({ block: 'start', behavior: U.reducedMotion() ? 'auto' : 'smooth' }), 'btn-small')), panel, guide.el);
       } else m.append(panel);
       return;
     }
@@ -716,7 +716,7 @@
     m.append(h('div.panel', null, h('h2', null, 'Free resources for what comes next'), list(MC.freeResources)));
     m.append(h('div.panel', null, h('h2', null, 'Credits and licences'), h('ul', null,
       h('li', null, 'Teaching tips and study structure: adapted from the supplied Middle C Piano Course tutorial. Memory clues, short try-it prompts, seven study topics and the 2–8–5 minute routine are integrated with this course’s lessons and exercises.'),
-      h('li', null, 'Interstellar — Main Theme beginner study: the 30 measures supplied as corrected ABC notation, which credits Piano Beginner as arranger. Practice drills and suggested fingerings were added for this workbook; the ABC is available to download beside the guide. This is separate from the 51-measure Matteo248 arrangement.'),
+      h('li', null, 'Interstellar — Main Theme beginner study: transcribed from the supplied two-page, 57-measure melody score at 86 BPM. Practice drills and suggested right-hand fingerings were added for this workbook; an ABC export is available beside the guide. This is separate from the 51-measure Matteo248 arrangement.'),
       h('li', { html: '<strong>Piano sound:</strong> Salamander Grand Piano V3 by Alexander Holm, <a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noopener">CC BY 3.0</a>, via the MP3 package by Jan Forst (MIT). Changed for this app: 21 notes (C2–C7), mono, trimmed, re-encoded; other notes are pitch-shifted. See <code>licenses/</code>.' }),
       h('li', { html: '<strong>Notation font:</strong> Bravura © Steinberg Media Technologies GmbH, SIL Open Font License 1.1 (subset embedded).' }),
       h('li', { html: '<strong>Text fonts:</strong> Inter (© The Inter Project Authors) and Fraunces (© The Fraunces Project Authors), both SIL Open Font License 1.1, Latin subsets bundled. See <code>licenses/</code>.' }),

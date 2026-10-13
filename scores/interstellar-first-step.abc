@@ -1,24 +1,39 @@
 X:1
-T:Interstellar (Main Theme)
+T:Interstellar (Main Theme) - 57-bar melody study
 C:Hans Zimmer
-Z:Arranged by Piano Beginner
+Z:Transcribed from the supplied two-page melody score
 M:3/4
 L:1/8
-Q:1/4=96
-K:Am
-%%staves {RH LH}
+Q:1/4=86
+K:C
 V:RH clef=treble
-V:LH clef=bass
-% User-supplied ABC; video reference https://www.youtube.com/watch?v=OQeUvNHR0Ac
-% Section 1: Intro Pulse & Sparse Melody
-[V:RH] z6 | z6 | z6 | z6 | A6 | B6 | A2 B2 c2 | A2 B2 c2 | B6 | A6 |
-[V:LH] E2 E2 E2 | E2 E2 E2 | E2 E2 E2 | E2 E2 E2 | E2 E2 E2 | E2 E2 E2 | E2 E2 E2 | E2 E2 E2 | E2 E2 E2 | E2 E2 E2 |
-% Section 2: Building Ostinato Pattern
-[V:RH] |: eBeBeB | eBeBeB | ececec | ececec | ededed | ededed | eBeBeB | eBeBeB :|
-[V:LH] |: A,6 | A,6 | C6 | C6 | D6 | D6 | E6 | E6 :|
-% Section 3: Melody over Bass Foundation
-[V:RH] A4 B2 | B6 | A2 B2 c2 | c6 | A2 B2 c2 | d6 | A2 B2 c2 | B6 |
-[V:LH] A,6 | A,6 | C6 | C6 | D6 | D6 | E6 | E6 |
-% Section 4: Climax Harmonic Progression
-[V:RH] |: [c2e2] [c2e2] [c2e2] | [B2d2] [B2d2] [B2d2] | [A2c2] [A2c2] [A2c2] | [G2B2] [G2B2] [G2B2] :|
-[V:LH] |: C,6 | G,,6 | A,,6 | E,,6 :|
+% Page 1. Bars 1-4: Opening - 0:03
+[V:RH] E2 E2 E2 | E2 E2 E2 | E2 E2 E2 | E2 E2 E2 |
+% Bars 5-8: Sustained phrase - 0:11. B4 is tied across bars 6-7.
+[V:RH] A6 | B6- | B6 | A2 B2 c2 |
+% Bars 9-12: Long E5 pattern begins at bar 12 - 0:26
+[V:RH] B2 A2 B2 | c6 | B6 | A2 e4 |
+% Bars 13-16
+[V:RH] A2 e4 | B2 e4 | B2 e4 | c2 e4 |
+% Bars 17-20: Repeat pattern begins at bar 20 - 0:43
+[V:RH] c2 e4 | d2 e4 | d2 e2 B2 | A2 e4 |
+% Bars 21-24
+[V:RH] A2 e4 | B2 e4 | B2 e4 | c2 e4 |
+% Bars 25-28: Quarter-note pattern begins at bar 28 - 0:59
+[V:RH] c2 e4 | d2 e4 | d2 e2 B2 | A2 e2 A2 |
+% Bars 29-32
+[V:RH] A2 e2 A2 | B2 e2 B2 | B2 e2 B2 | c2 e2 c2 |
+% Page 2. Bars 33-36: Repeat pattern begins at bar 36 - 1:16
+[V:RH] c2 e2 c2 | d2 e2 d2 | d2 e2 B2 | A2 e2 A2 |
+% Bars 37-40
+[V:RH] A2 e2 A2 | B2 e2 B2 | B2 e2 B2 | c2 e2 c2 |
+% Bars 41-44: Return to E4 at bar 44 - 1:33
+[V:RH] c2 e2 c2 | d2 e2 d2 | d2 e2 B2 | E2 E2 E2 |
+% Bars 45-48: Eighth-note pairs begin at bar 46 - 1:37
+[V:RH] E2 E2 E2 | cE cE cE | cE cE cE | dG dG dG |
+% Bars 49-52: Upper register begins at bar 50 - 1:45
+[V:RH] dG dG dG | a c a c a c | a c a c a c | b e b e b e |
+% Bars 53-56
+[V:RH] b e b e b e | c' e c' e c' e | c' e c' e c' e | d' e d' e d' e |
+% Bar 57: final D6-E5 pairs
+[V:RH] d' e d' e d' e |

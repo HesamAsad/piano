@@ -113,54 +113,48 @@ const invalidPartialTie = T.buildScore({ time: [3, 4], staves: [{ clef: 'treble'
 ok(invalidPartialTie.errors.some((e) => e.includes('tie without')), 'reject a partial tie to a pitch absent from the chord');
 ok(T.parseVoice('C4s D4s E4s F4s G4h', 3).errors.length === 0 && T.parseVoice('rs C4e. D4h', 3).errors.length === 0, 'sixteenth notes and rests fill a 3/4 bar correctly');
 
-// ---- First Step: compare every pitch, duration and repeat against the supplied ABC.
+// ---- Interstellar melody replacement: audit every bar against the image transcription.
 const firstStep = MC.pieces['interstellar-first-step'];
 const firstScore = T.buildScore(firstStep);
 const abcSource = fs.readFileSync(path.join(root, 'scores/interstellar-first-step.abc'), 'utf8');
-function readSuppliedABC(voice) {
-  const source = abcSource.split('\n').filter((l) => l.startsWith(`[V:${voice}]`)).map((l) => l.replace(/^\[V:\w+\]/, '')).join(' ');
-  // This intentionally small reference reader covers the literal notation in the supplied file.
-  const token = /\|:|:\||\||\[[A-Ga-g0-9,']+\]|[A-Ga-gz][,']*\d*/g;
-  ok(source.replace(token, '').trim() === '', `ABC ${voice}: every symbol is understood`);
-  const bars = []; let bar = { events: [], startRepeat: false, endRepeat: false };
-  const close = () => { if (bar.events.length) bars.push(bar); bar = { events: [], startRepeat: false, endRepeat: false }; };
-  const note = (str) => {
-    const [, letter, octaveMarks, length] = /^([A-Ga-gz])([,']*)(\d*)$/.exec(str);
-    const octave = (letter === letter.toUpperCase() ? 4 : 5) + [...octaveMarks].reduce((a, c) => a + (c === ',' ? -1 : 1), 0);
-    return { midi: letter === 'z' ? null : 12 * (octave + 1) + { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }[letter.toUpperCase()], dur: (length ? +length : 1) / 2 };
-  };
-  for (const item of source.match(token)) {
-    if (item === '|') { close(); continue; }
-    if (item === '|:') { close(); bar.startRepeat = true; continue; }
-    if (item === ':|') { bar.endRepeat = true; close(); continue; }
-    const notes = item.startsWith('[') ? item.slice(1, -1).match(/[A-Ga-g][,']*\d*/g).map(note) : [note(item)];
-    ok(notes.every((n) => n.dur === notes[0].dur), `ABC ${voice}: chord tones have equal lengths`);
-    bar.events.push({ midis: notes.map((n) => n.midi).filter((n) => n != null).sort((a, b) => a - b), dur: notes[0].dur });
-  }
-  close(); return bars;
-}
-['RH', 'LH'].forEach((name, si) => {
-  const bars = readSuppliedABC(name), staff = firstScore.staves[si];
-  ok(bars.length === 30 && staff.measures.length === bars.length, `${name}: all 30 supplied measures present`);
-  bars.forEach((bar, mi) => {
-    const actual = staff.measures[mi];
-    ok(actual.events.length === bar.events.length, `${name} ${mi + 1}: all note/rest events present`);
-    ok(actual.startRepeat === bar.startRepeat && actual.endRepeat === bar.endRepeat, `${name} ${mi + 1}: repeat signs match ABC`);
-    bar.events.forEach((ev, ei) => {
-      const got = actual.events[ei];
-      ok(got.notes.map((n) => n.midi).join() === ev.midis.join() && near(got.dur, ev.dur), `${name} ${mi + 1}:${ei}: pitch, octave and duration match ABC`);
-      if (got.notes.length) {
-        ok(got.fingers?.length === got.notes.length && new Set(got.fingers).size === got.fingers.length, `${name} ${mi + 1}:${ei}: every chord tone has a distinct finger`);
-        const placement = firstStep.handPositions.find((p) => mi + 1 >= p.from && mi + 1 <= p.to)[staff.hand];
-        ok(got.notes.every((n, i) => T.midi(placement[got.fingers[i] - 1]) === n.midi), `${name} ${mi + 1}:${ei}: diagram agrees with printed fingering`);
-      }
-    });
+const abcVoice = abcSource.split('\n').filter((l) => l.startsWith('[V:RH]')).map((l) => l.slice(6)).join(' ');
+const abcBars = abcVoice.split('|').map((bar) => bar.trim()).filter(Boolean);
+const abcNote = /^([A-Ga-g])([,']*)(\d*)(-?)$/;
+ok(firstScore.staves.length === 1 && firstScore.staves[0].clef === 'treble', 'melody study: one treble staff, with no added accompaniment');
+ok(firstScore.count === 57 && abcBars.length === 57, 'melody study: all 57 supplied bars');
+ok(firstScore.tempo === 86 && /^Q:1\/4=86$/m.test(abcSource) && firstScore.time.join('/') === '3/4', 'melody study: written 86 BPM and 3/4');
+abcBars.forEach((bar, mi) => {
+  const tokens = bar.match(/[A-Ga-g][,']*\d*-?/g) || [];
+  ok(bar.replace(/[A-Ga-g][,']*\d*-?/g, '').trim() === '', `ABC ${mi + 1}: all symbols understood`);
+  const actual = firstScore.staves[0].measures[mi];
+  ok(actual.events.length === tokens.length, `melody bar ${mi + 1}: every printed notehead included`);
+  tokens.forEach((token, ei) => {
+    const [, letter, marks, length, tie] = abcNote.exec(token);
+    const octave = (letter === letter.toUpperCase() ? 4 : 5) + [...marks].reduce((a, c) => a + (c === ',' ? -1 : 1), 0);
+    const pitch = letter.toUpperCase() + octave;
+    const got = actual.events[ei];
+    ok(got.notes.length === 1 && T.id(got.notes[0]) === pitch && near(got.dur, (length ? +length : 1) / 2), `melody ${mi + 1}:${ei}: pitch, octave and duration match transcription`);
+    ok(!!got.tie === !!tie, `melody ${mi + 1}:${ei}: tie matches transcription`);
+    const placement = firstStep.handPositions.find((p) => mi + 1 >= p.from && mi + 1 <= p.to).rh;
+    ok(got.fingers?.length === 1 && T.midi(placement[got.fingers[0] - 1]) === got.notes[0].midi, `melody ${mi + 1}:${ei}: printed fingering and hand agree`);
   });
 });
 const firstTimeline = T.timeline(firstScore);
-ok(T.measureOrder(firstScore).join() === [...Array(18).keys(), ...Array.from({ length: 20 }, (_, i) => i + 10), 26, 27, 28, 29].join(), 'First Step: bars 11–18 and 27–30 repeat');
-ok(firstTimeline.total === 126 && near(T.tempoClock(96).seconds(firstTimeline.total), 78.75), 'First Step: 42 performed bars at 96 BPM');
-ok(T.sliceTimeline(T.timeline(firstScore, { noRepeats: true }), 30, 54).total === 24, 'selected ostinato has eight bars, with no internal repeat');
+ok(T.measureOrder(firstScore).join() === [...Array(57).keys()].join(), 'melody study: written-out patterns play once, with no extra repeats');
+ok(firstTimeline.total === 171 && near(T.tempoClock(86).seconds(firstTimeline.total), 5130 / 43), 'melody study: 171 quarter-note beats at 86 BPM');
+ok(firstScore.staves[0].measures.reduce((n, m) => n + m.events.length, 0) === 183 && T.onsets(firstTimeline).length === 182, 'melody study: 183 noteheads, 182 attacks after the single tie');
+const sustainedB = firstTimeline.items.find((it) => it.mi === 5);
+ok(sustainedB.midis.join() === '71' && sustainedB.d === 6 && firstTimeline.items.find((it) => it.mi === 6).midis.length === 0, 'B4 holds six beats through bars 6–7 without re-striking');
+ok(T.sliceTimeline(firstTimeline, 18, 21).items[0].midis.join() === '71' && T.sliceTimeline(firstTimeline, 18, 21).items[0].d === 3, 'starting practice at bar 7 sounds the tied continuation for three beats');
+// An independent visual check of the distinctive transitions in the two supplied images.
+const melodyBar = (n) => firstScore.staves[0].measures[n - 1].events.map((e) => `${T.id(e.notes[0])}:${e.dur}`).join(' ');
+ok(melodyBar(8) === 'A4:1 B4:1 C5:1' && melodyBar(9) === 'B4:1 A4:1 B4:1', 'opening motifs match the image');
+[19, 27, 35, 43].forEach((n) => ok(melodyBar(n) === 'D5:1 E5:1 B4:1', `bar ${n}: phrase resolves to B4`));
+[[46, 'C5', 'E4'], [48, 'D5', 'G4'], [50, 'A5', 'C5'], [52, 'B5', 'E5'], [54, 'C6', 'E5'], [56, 'D6', 'E5']].forEach(([n, high, low]) => {
+  const expected = Array(3).fill(`${high}:0.5 ${low}:0.5`).join(' ');
+  ok(melodyBar(n) === expected && melodyBar(n + 1) === expected, `bars ${n}–${n + 1}: six alternating eighths in the correct register`);
+});
+ok(firstStep.sections.map((s) => s.from).join() === '1,5,12,20,28,36,44,46,50', 'practice sections follow the printed section markers');
 
 // ---- Begonvil: separate vocal part, chromatic spelling, pedal, and directed rolls.
 const begonvil = T.buildScore(MC.pieces.begonvil);
